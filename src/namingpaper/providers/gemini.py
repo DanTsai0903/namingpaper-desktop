@@ -77,3 +77,28 @@ class GeminiProvider(AIProvider):
             raise RuntimeError("Gemini returned an empty response.")
 
         return self._parse_response_json(response_text, "Gemini")
+
+    async def call_raw(self, prompt: str) -> str:
+        """Send a raw prompt and return response text."""
+        try:
+            response = await asyncio.to_thread(
+                self.model.generate_content,
+                prompt,
+                request_options=self._request_options,
+            )
+        except Exception as e:
+            err = str(e).lower()
+            if "api key" in err or "permission" in err:
+                raise RuntimeError(
+                    "Invalid Gemini API key. Check your NAMINGPAPER_GEMINI_API_KEY."
+                ) from e
+            raise
+        try:
+            response_text = response.text
+        except ValueError as e:
+            raise RuntimeError(
+                f"Gemini returned no usable response: {e}"
+            ) from e
+        if not response_text:
+            raise RuntimeError("Gemini returned an empty response.")
+        return response_text

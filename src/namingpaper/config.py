@@ -56,6 +56,12 @@ class Settings(BaseSettings):
         default=200, ge=20, le=255, description="Maximum filename length"
     )
 
+    # Library settings
+    papers_dir: Path = Field(
+        default=Path.home() / "Papers",
+        description="Root directory for organized papers",
+    )
+
     @classmethod
     def load(cls) -> "Settings":
         """Load settings from environment and config file."""

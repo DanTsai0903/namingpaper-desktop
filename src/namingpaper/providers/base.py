@@ -61,6 +61,16 @@ class AIProvider(ABC):
             return text
         return text[:max_chars] + "\n\n[Text truncated...]"
 
+    async def call_raw(self, prompt: str) -> str:
+        """Send a raw prompt and return the response text.
+
+        Subclasses should override for efficient implementation.
+        Raises NotImplementedError if not supported.
+        """
+        raise NotImplementedError(
+            f"{type(self).__name__} does not support raw prompts"
+        )
+
     def _parse_response_json(self, response_text: str, provider_name: str) -> PaperMetadata:
         """Extract JSON from AI response text and return PaperMetadata.
 

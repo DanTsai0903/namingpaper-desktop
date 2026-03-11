@@ -112,6 +112,18 @@ class OllamaProvider(AIProvider):
             return result["message"].get("content", "")
         return result.get("response", "")
 
+    async def call_raw(self, prompt: str) -> str:
+        """Send a raw prompt and return response text."""
+        payload = {
+            "model": self.text_model,
+            "prompt": prompt,
+            "stream": False,
+            "format": "json",
+            "keep_alive": self.keep_alive,
+        }
+        result = await self._call_ollama("/api/generate", payload)
+        return result.get("response", "")
+
     async def _parse_metadata(self, text: str) -> PaperMetadata:
         """Stage 2: Parse metadata from text using text model."""
         prompt = f"Paper text:\n\n{text}\n\n{EXTRACTION_PROMPT}"

@@ -91,3 +91,23 @@ class OpenAIProvider(AIProvider):
         response_text = response.choices[0].message.content
 
         return self._parse_response_json(response_text, "OpenAI")
+
+    async def call_raw(self, prompt: str) -> str:
+        """Send a raw prompt and return response text."""
+        try:
+            response = await asyncio.to_thread(
+                self.client.chat.completions.create,
+                model=self.model,
+                max_tokens=1024,
+                messages=[{"role": "user", "content": prompt}],
+            )
+        except Exception as e:
+            err = str(e).lower()
+            if "auth" in err or "api key" in err:
+                raise RuntimeError(
+                    "Invalid OpenAI API key. Check your NAMINGPAPER_OPENAI_API_KEY."
+                ) from e
+            raise
+        if not response.choices or not response.choices[0].message.content:
+            raise RuntimeError("OpenAI returned an empty response.")
+        return response.choices[0].message.content

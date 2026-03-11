@@ -1,0 +1,566 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10001000000000000000001 /* NamingPaperApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20001000000000000000001 /* NamingPaperApp.swift */; };
+		A10002000000000000000002 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20002000000000000000002 /* AppDelegate.swift */; };
+		A10003000000000000000003 /* Paper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20003000000000000000003 /* Paper.swift */; };
+		A10004000000000000000004 /* Category.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20004000000000000000004 /* Category.swift */; };
+		A10005000000000000000005 /* LibraryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20005000000000000000005 /* LibraryViewModel.swift */; };
+		A10006000000000000000006 /* SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20006000000000000000006 /* SearchViewModel.swift */; };
+		A10007000000000000000007 /* AddPaperViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20007000000000000000007 /* AddPaperViewModel.swift */; };
+		A10008000000000000000008 /* TabManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20008000000000000000008 /* TabManager.swift */; };
+		A10009000000000000000009 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20009000000000000000009 /* ContentView.swift */; };
+		A1000A00000000000000000A /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000A00000000000000000A /* SidebarView.swift */; };
+		A1000B00000000000000000B /* CategoryTreeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000B00000000000000000B /* CategoryTreeView.swift */; };
+		A1000C00000000000000000C /* RecentPapersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000C00000000000000000C /* RecentPapersView.swift */; };
+		A1000D00000000000000000D /* PaperListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000D00000000000000000D /* PaperListView.swift */; };
+		A1000E00000000000000000E /* PaperRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000E00000000000000000E /* PaperRowView.swift */; };
+		A1000F00000000000000000F /* PaperDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000F00000000000000000F /* PaperDetailView.swift */; };
+		A10010000000000000000010 /* PDFPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20010000000000000000010 /* PDFPreviewView.swift */; };
+		A10011000000000000000011 /* TabBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20011000000000000000011 /* TabBarView.swift */; };
+		A10012000000000000000012 /* CommandPaletteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20012000000000000000012 /* CommandPaletteView.swift */; };
+		A10013000000000000000013 /* CommandPaletteItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20013000000000000000013 /* CommandPaletteItem.swift */; };
+		A10014000000000000000014 /* AddPaperSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20014000000000000000014 /* AddPaperSheet.swift */; };
+		A10015000000000000000015 /* DropZoneOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20015000000000000000015 /* DropZoneOverlay.swift */; };
+		A10016000000000000000016 /* PreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20016000000000000000016 /* PreferencesView.swift */; };
+		A10017000000000000000017 /* GeneralPrefsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20017000000000000000017 /* GeneralPrefsView.swift */; };
+		A10018000000000000000018 /* AIProviderPrefsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20018000000000000000018 /* AIProviderPrefsView.swift */; };
+		A10019000000000000000019 /* DatabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20019000000000000000019 /* DatabaseService.swift */; };
+		A1001A0000000000000001A /* CLIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2001A0000000000000001A /* CLIService.swift */; };
+		A1001B0000000000000001B /* ConfigService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2001B0000000000000001B /* ConfigService.swift */; };
+		A1001C0000000000000001C /* KeyboardShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2001C0000000000000001C /* KeyboardShortcuts.swift */; };
+		A1001D0000000000000001D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A2001D0000000000000001D /* Assets.xcassets */; };
+		A1001E0000000000000001E /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A2001E0000000000000001E /* Preview Assets.xcassets */; };
+		A1001F0000000000000001F /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = A2001F0000000000000001F /* libsqlite3.tbd */; };
+		A10020000000000000000020 /* PDFKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A20020000000000000000020 /* PDFKit.framework */; };
+		A10021000000000000000021 /* Quartz.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A20021000000000000000021 /* Quartz.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A20001000000000000000001 /* NamingPaperApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NamingPaperApp.swift; sourceTree = "<group>"; };
+		A20002000000000000000002 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		A20003000000000000000003 /* Paper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Paper.swift; sourceTree = "<group>"; };
+		A20004000000000000000004 /* Category.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Category.swift; sourceTree = "<group>"; };
+		A20005000000000000000005 /* LibraryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryViewModel.swift; sourceTree = "<group>"; };
+		A20006000000000000000006 /* SearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModel.swift; sourceTree = "<group>"; };
+		A20007000000000000000007 /* AddPaperViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPaperViewModel.swift; sourceTree = "<group>"; };
+		A20008000000000000000008 /* TabManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabManager.swift; sourceTree = "<group>"; };
+		A20009000000000000000009 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A2000A00000000000000000A /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
+		A2000B00000000000000000B /* CategoryTreeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryTreeView.swift; sourceTree = "<group>"; };
+		A2000C00000000000000000C /* RecentPapersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentPapersView.swift; sourceTree = "<group>"; };
+		A2000D00000000000000000D /* PaperListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaperListView.swift; sourceTree = "<group>"; };
+		A2000E00000000000000000E /* PaperRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaperRowView.swift; sourceTree = "<group>"; };
+		A2000F00000000000000000F /* PaperDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaperDetailView.swift; sourceTree = "<group>"; };
+		A20010000000000000000010 /* PDFPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFPreviewView.swift; sourceTree = "<group>"; };
+		A20011000000000000000011 /* TabBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabBarView.swift; sourceTree = "<group>"; };
+		A20012000000000000000012 /* CommandPaletteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandPaletteView.swift; sourceTree = "<group>"; };
+		A20013000000000000000013 /* CommandPaletteItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandPaletteItem.swift; sourceTree = "<group>"; };
+		A20014000000000000000014 /* AddPaperSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPaperSheet.swift; sourceTree = "<group>"; };
+		A20015000000000000000015 /* DropZoneOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DropZoneOverlay.swift; sourceTree = "<group>"; };
+		A20016000000000000000016 /* PreferencesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesView.swift; sourceTree = "<group>"; };
+		A20017000000000000000017 /* GeneralPrefsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralPrefsView.swift; sourceTree = "<group>"; };
+		A20018000000000000000018 /* AIProviderPrefsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIProviderPrefsView.swift; sourceTree = "<group>"; };
+		A20019000000000000000019 /* DatabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseService.swift; sourceTree = "<group>"; };
+		A2001A0000000000000001A /* CLIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIService.swift; sourceTree = "<group>"; };
+		A2001B0000000000000001B /* ConfigService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigService.swift; sourceTree = "<group>"; };
+		A2001C0000000000000001C /* KeyboardShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardShortcuts.swift; sourceTree = "<group>"; };
+		A2001D0000000000000001D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A2001E0000000000000001E /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		A2001F0000000000000001F /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
+		A20020000000000000000020 /* PDFKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PDFKit.framework; path = System/Library/Frameworks/PDFKit.framework; sourceTree = SDKROOT; };
+		A20021000000000000000021 /* Quartz.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Quartz.framework; path = System/Library/Frameworks/Quartz.framework; sourceTree = SDKROOT; };
+		A20022000000000000000022 /* NamingPaper.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NamingPaper.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20023000000000000000023 /* NamingPaper.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NamingPaper.entitlements; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A30001000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1001F0000000000000001F /* libsqlite3.tbd in Frameworks */,
+				A10020000000000000000020 /* PDFKit.framework in Frameworks */,
+				A10021000000000000000021 /* Quartz.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A40001000000000000000001 /* Root */ = {
+			isa = PBXGroup;
+			children = (
+				A40002000000000000000002 /* NamingPaper */,
+				A40003000000000000000003 /* Products */,
+				A40004000000000000000004 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		A40002000000000000000002 /* NamingPaper */ = {
+			isa = PBXGroup;
+			children = (
+				A40005000000000000000005 /* App */,
+				A40006000000000000000006 /* Models */,
+				A40007000000000000000007 /* ViewModels */,
+				A40008000000000000000008 /* Views */,
+				A40009000000000000000009 /* Services */,
+				A4000A00000000000000000A /* Utilities */,
+				A2001D0000000000000001D /* Assets.xcassets */,
+				A4000B00000000000000000B /* Preview Content */,
+				A20023000000000000000023 /* NamingPaper.entitlements */,
+			);
+			path = NamingPaper;
+			sourceTree = "<group>";
+		};
+		A40003000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A20022000000000000000022 /* NamingPaper.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A40004000000000000000004 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				A2001F0000000000000001F /* libsqlite3.tbd */,
+				A20020000000000000000020 /* PDFKit.framework */,
+				A20021000000000000000021 /* Quartz.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		A40005000000000000000005 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				A20001000000000000000001 /* NamingPaperApp.swift */,
+				A20002000000000000000002 /* AppDelegate.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		A40006000000000000000006 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A20003000000000000000003 /* Paper.swift */,
+				A20004000000000000000004 /* Category.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		A40007000000000000000007 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				A20005000000000000000005 /* LibraryViewModel.swift */,
+				A20006000000000000000006 /* SearchViewModel.swift */,
+				A20007000000000000000007 /* AddPaperViewModel.swift */,
+				A20008000000000000000008 /* TabManager.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		A40008000000000000000008 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A20009000000000000000009 /* ContentView.swift */,
+				A4000C00000000000000000C /* Sidebar */,
+				A4000D00000000000000000D /* PaperList */,
+				A4000E00000000000000000E /* Detail */,
+				A4000F00000000000000000F /* CommandPalette */,
+				A40010000000000000000010 /* AddPaper */,
+				A40011000000000000000011 /* Preferences */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A40009000000000000000009 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				A20019000000000000000019 /* DatabaseService.swift */,
+				A2001A0000000000000001A /* CLIService.swift */,
+				A2001B0000000000000001B /* ConfigService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		A4000A00000000000000000A /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				A2001C0000000000000001C /* KeyboardShortcuts.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		A4000B00000000000000000B /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+				A2001E0000000000000001E /* Preview Assets.xcassets */,
+			);
+			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		A4000C00000000000000000C /* Sidebar */ = {
+			isa = PBXGroup;
+			children = (
+				A2000A00000000000000000A /* SidebarView.swift */,
+				A2000B00000000000000000B /* CategoryTreeView.swift */,
+				A2000C00000000000000000C /* RecentPapersView.swift */,
+			);
+			path = Sidebar;
+			sourceTree = "<group>";
+		};
+		A4000D00000000000000000D /* PaperList */ = {
+			isa = PBXGroup;
+			children = (
+				A2000D00000000000000000D /* PaperListView.swift */,
+				A2000E00000000000000000E /* PaperRowView.swift */,
+			);
+			path = PaperList;
+			sourceTree = "<group>";
+		};
+		A4000E00000000000000000E /* Detail */ = {
+			isa = PBXGroup;
+			children = (
+				A2000F00000000000000000F /* PaperDetailView.swift */,
+				A20010000000000000000010 /* PDFPreviewView.swift */,
+				A20011000000000000000011 /* TabBarView.swift */,
+			);
+			path = Detail;
+			sourceTree = "<group>";
+		};
+		A4000F00000000000000000F /* CommandPalette */ = {
+			isa = PBXGroup;
+			children = (
+				A20012000000000000000012 /* CommandPaletteView.swift */,
+				A20013000000000000000013 /* CommandPaletteItem.swift */,
+			);
+			path = CommandPalette;
+			sourceTree = "<group>";
+		};
+		A40010000000000000000010 /* AddPaper */ = {
+			isa = PBXGroup;
+			children = (
+				A20014000000000000000014 /* AddPaperSheet.swift */,
+				A20015000000000000000015 /* DropZoneOverlay.swift */,
+			);
+			path = AddPaper;
+			sourceTree = "<group>";
+		};
+		A40011000000000000000011 /* Preferences */ = {
+			isa = PBXGroup;
+			children = (
+				A20016000000000000000016 /* PreferencesView.swift */,
+				A20017000000000000000017 /* GeneralPrefsView.swift */,
+				A20018000000000000000018 /* AIProviderPrefsView.swift */,
+			);
+			path = Preferences;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A50001000000000000000001 /* NamingPaper */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A70001000000000000000001 /* Build configuration list for PBXNativeTarget "NamingPaper" */;
+			buildPhases = (
+				A60001000000000000000001 /* Sources */,
+				A30001000000000000000001 /* Frameworks */,
+				A60002000000000000000002 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = NamingPaper;
+			productName = NamingPaper;
+			productReference = A20022000000000000000022 /* NamingPaper.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A80001000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					A50001000000000000000001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = A70002000000000000000002 /* Build configuration list for PBXProject "NamingPaper" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A40001000000000000000001 /* Root */;
+			productRefGroup = A40003000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A50001000000000000000001 /* NamingPaper */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A60002000000000000000002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1001D0000000000000001D /* Assets.xcassets in Resources */,
+				A1001E0000000000000001E /* Preview Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A60001000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10001000000000000000001 /* NamingPaperApp.swift in Sources */,
+				A10002000000000000000002 /* AppDelegate.swift in Sources */,
+				A10003000000000000000003 /* Paper.swift in Sources */,
+				A10004000000000000000004 /* Category.swift in Sources */,
+				A10005000000000000000005 /* LibraryViewModel.swift in Sources */,
+				A10006000000000000000006 /* SearchViewModel.swift in Sources */,
+				A10007000000000000000007 /* AddPaperViewModel.swift in Sources */,
+				A10008000000000000000008 /* TabManager.swift in Sources */,
+				A10009000000000000000009 /* ContentView.swift in Sources */,
+				A1000A00000000000000000A /* SidebarView.swift in Sources */,
+				A1000B00000000000000000B /* CategoryTreeView.swift in Sources */,
+				A1000C00000000000000000C /* RecentPapersView.swift in Sources */,
+				A1000D00000000000000000D /* PaperListView.swift in Sources */,
+				A1000E00000000000000000E /* PaperRowView.swift in Sources */,
+				A1000F00000000000000000F /* PaperDetailView.swift in Sources */,
+				A10010000000000000000010 /* PDFPreviewView.swift in Sources */,
+				A10011000000000000000011 /* TabBarView.swift in Sources */,
+				A10012000000000000000012 /* CommandPaletteView.swift in Sources */,
+				A10013000000000000000013 /* CommandPaletteItem.swift in Sources */,
+				A10014000000000000000014 /* AddPaperSheet.swift in Sources */,
+				A10015000000000000000015 /* DropZoneOverlay.swift in Sources */,
+				A10016000000000000000016 /* PreferencesView.swift in Sources */,
+				A10017000000000000000017 /* GeneralPrefsView.swift in Sources */,
+				A10018000000000000000018 /* AIProviderPrefsView.swift in Sources */,
+				A10019000000000000000019 /* DatabaseService.swift in Sources */,
+				A1001A0000000000000001A /* CLIService.swift in Sources */,
+				A1001B0000000000000001B /* ConfigService.swift in Sources */,
+				A1001C0000000000000001C /* KeyboardShortcuts.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A90001000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A90002000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		A90003000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = NamingPaper/NamingPaper.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"NamingPaper/Preview Content\"";
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright \U00A9 2026 namingpaper. All rights reserved.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.namingpaper.NamingPaper;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A90004000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = NamingPaper/NamingPaper.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"NamingPaper/Preview Content\"";
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright \U00A9 2026 namingpaper. All rights reserved.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.namingpaper.NamingPaper;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A70001000000000000000001 /* Build configuration list for PBXNativeTarget "NamingPaper" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A90003000000000000000003 /* Debug */,
+				A90004000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A70002000000000000000002 /* Build configuration list for PBXProject "NamingPaper" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A90001000000000000000001 /* Debug */,
+				A90002000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A80001000000000000000001 /* Project object */;
+}

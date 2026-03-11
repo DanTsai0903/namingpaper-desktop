@@ -421,6 +421,39 @@ For slow machines or large models, Ollama may time out. Try a smaller model:
 namingpaper rename paper.pdf -m qwen3:4b
 ```
 
+## Paper Library
+
+namingpaper includes a local paper library backed by SQLite. Add papers, search metadata, and organize by category — all from the CLI.
+
+```bash
+# Add a paper to the library (dry-run)
+namingpaper add paper.pdf
+
+# Add and organize (rename + summarize + categorize + file)
+namingpaper add paper.pdf --execute
+
+# Search your library
+namingpaper search "risk factors"
+namingpaper search --author "Fama" --year 2020-2024
+
+# List, inspect, remove
+namingpaper list --category "Finance/Asset Pricing"
+namingpaper info a3f2
+namingpaper remove a3f2 --execute
+```
+
+Papers are organized into `~/Papers/` (configurable via `NAMINGPAPER_PAPERS_DIR`) with category subfolders.
+
+### Web UI with Filestash
+
+You can use [Filestash](https://www.filestash.app/) as a web file browser for your paper library:
+
+1. Install and run Filestash (Docker or standalone)
+2. Create a backend pointing to your `papers_dir` (default: `~/Papers`)
+3. Browse, preview PDFs, and manage files through the web UI
+
+Paper-specific operations (search by author/year/journal, AI categorization) remain in the `namingpaper` CLI.
+
 ## Development
 
 ```bash

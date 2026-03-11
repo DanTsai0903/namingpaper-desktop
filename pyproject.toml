@@ -1,12 +1,12 @@
 [project]
 name = "namingpaper"
 version = "0.2.7"
-description = "CLI tool to rename academic papers using AI-extracted metadata"
+description = "CLI tool to rename, organize, and search academic papers using AI-extracted metadata"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [{name = "DanTsai0903"}]
-keywords = ["pdf", "academic", "papers", "rename", "metadata", "ai", "cli"]
+keywords = ["pdf", "academic", "papers", "rename", "metadata", "ai", "cli", "library", "search", "organize"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
