@@ -61,6 +61,8 @@ class ConfigService {
         let dir = (configPath as NSString).deletingLastPathComponent
         try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
         try lines.joined(separator: "\n").write(toFile: configPath, atomically: true, encoding: .utf8)
+        // Restrict to owner-only since the file may contain API keys
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: configPath)
     }
 
     // MARK: - Minimal TOML Parser

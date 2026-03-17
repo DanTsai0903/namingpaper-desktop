@@ -10,7 +10,7 @@ from namingpaper.models import PDFContent, PaperMetadata
 from namingpaper.providers.base import AIProvider, EXTRACTION_PROMPT
 
 
-class OmlxProvider(AIProvider):
+class oMLXProvider(AIProvider):
     """oMLX provider for local LLM inference on Apple Silicon.
 
     Uses oMLX's OpenAI-compatible API at /v1/chat/completions.
@@ -48,7 +48,7 @@ class OmlxProvider(AIProvider):
             await self._client.aclose()
             self._client = None
 
-    async def __aenter__(self) -> "OmlxProvider":
+    async def __aenter__(self) -> "oMLXProvider":
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:

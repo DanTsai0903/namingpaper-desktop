@@ -5,7 +5,16 @@ struct SavedProvider: Identifiable, Codable, Hashable {
     var name: String
     var provider: String
     var model: String
-    var apiKey: String
+
+    // API key stored in Keychain, not serialized to UserDefaults
+    var apiKey: String {
+        get { KeychainService.load(account: id.uuidString) }
+        set { KeychainService.save(key: newValue, account: id.uuidString) }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, provider, model
+    }
 }
 
 struct AIProviderPrefsView: View {
@@ -56,13 +65,14 @@ struct AIProviderPrefsView: View {
 
                 Divider()
 
-                HStack(spacing: 8) {
+                HStack(spacing: 4) {
                     Button {
                         addNew()
                     } label: {
                         Image(systemName: "plus")
+                            .frame(width: 24, height: 24)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.borderless)
                     .help("Add new provider")
 
                     Button {
@@ -71,14 +81,16 @@ struct AIProviderPrefsView: View {
                         }
                     } label: {
                         Image(systemName: "minus")
+                            .frame(width: 24, height: 24)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.borderless)
                     .disabled(selectedID == nil)
                     .help("Remove selected provider")
 
                     Spacer()
                 }
-                .padding(8)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
             }
             .frame(minWidth: 160, maxWidth: 200)
 
@@ -102,7 +114,7 @@ struct AIProviderPrefsView: View {
                     SecureField("API Key", text: $editApiKey, prompt: Text(apiKeyPlaceholder))
                         .textFieldStyle(.roundedBorder)
 
-                    Text("Stored in ~/.namingpaper/config.toml")
+                    Text("Stored securely in Keychain")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -165,7 +177,7 @@ struct AIProviderPrefsView: View {
 
     private func addNew() {
         let index = savedProviders.count + 1
-        let new = SavedProvider(name: "Model \(index)", provider: "ollama", model: "", apiKey: "")
+        let new = SavedProvider(name: "Model \(index)", provider: "ollama", model: "")
         savedProviders.append(new)
         selectedID = new.id
         persistSavedProviders()
@@ -173,6 +185,7 @@ struct AIProviderPrefsView: View {
 
     private func delete(_ item: SavedProvider?) {
         guard let item else { return }
+        KeychainService.delete(account: item.id.uuidString)
         savedProviders.removeAll { $0.id == item.id }
         if selectedID == item.id {
             selectedID = savedProviders.first?.id
@@ -183,12 +196,14 @@ struct AIProviderPrefsView: View {
     private func activate(_ item: SavedProvider) {
         activeProvider = item.provider
         activeModel = item.model
-        // Write API key to config.toml
+        // Write provider/model to config.toml (no API key)
         var config = ConfigService.shared.readConfig()
         config.provider = item.provider
         config.model = item.model
-        config.apiKey = item.apiKey
+        config.apiKey = ""  // clear any existing key from config.toml
         try? ConfigService.shared.writeConfig(config)
+        // Store API key in Keychain with well-known account so the CLI can read it
+        KeychainService.save(key: item.apiKey, account: config.apiKeyTOMLName)
     }
 
     private func saveCurrentEdit() {
@@ -212,12 +227,12 @@ struct AIProviderPrefsView: View {
         // If no saved providers, create one from current config
         if savedProviders.isEmpty {
             let config = ConfigService.shared.readConfig()
-            let initial = SavedProvider(
+            var initial = SavedProvider(
                 name: "Model 1",
                 provider: config.provider.isEmpty ? "ollama" : config.provider,
-                model: config.model,
-                apiKey: config.apiKey
+                model: config.model
             )
+            initial.apiKey = config.apiKey
             savedProviders = [initial]
             persistSavedProviders()
         }

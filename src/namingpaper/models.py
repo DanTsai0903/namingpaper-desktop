@@ -3,7 +3,7 @@
 from enum import Enum
 from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class PaperMetadata(BaseModel):
@@ -14,7 +14,12 @@ class PaperMetadata(BaseModel):
         default_factory=list, description="List of author full names"
     )
     year: int = Field(description="Publication year")
-    journal: str = Field(min_length=1, description="Full journal name")
+    journal: str = Field(default="", description="Full journal name")
+
+    @field_validator("journal", mode="before")
+    @classmethod
+    def coerce_journal_none(cls, v: object) -> object:
+        return v if v is not None else ""
     journal_abbrev: str | None = Field(
         default=None, description="Common journal abbreviation"
     )

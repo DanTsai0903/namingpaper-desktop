@@ -1,5 +1,7 @@
 """Configuration management for namingpaper."""
 
+import platform
+import subprocess
 import tomllib
 from pathlib import Path
 from typing import Literal
@@ -113,7 +115,54 @@ class Settings(BaseSettings):
                     f"Cannot read config file '{config_path}': {e}"
                 ) from e
 
-        return cls(**file_settings)
+        instance = cls(**file_settings)
+
+        # On macOS, fill missing API keys from Keychain (set by the NamingPaper app)
+        if platform.system() == "Darwin":
+            _fill_keys_from_keychain(instance)
+
+        return instance
+
+
+_KEYCHAIN_SERVICE = "com.namingpaper.provider-keys"
+
+_KEYCHAIN_KEY_FIELDS = {
+    "anthropic_api_key": "anthropic_api_key",
+    "openai_api_key": "openai_api_key",
+    "gemini_api_key": "gemini_api_key",
+    "omlx_api_key": "omlx_api_key",
+}
+
+
+def _read_keychain(account: str) -> str | None:
+    """Read a value from macOS Keychain."""
+    try:
+        result = subprocess.run(
+            [
+                "security",
+                "find-generic-password",
+                "-s", _KEYCHAIN_SERVICE,
+                "-a", account,
+                "-w",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    return None
+
+
+def _fill_keys_from_keychain(settings: "Settings") -> None:
+    """Fill missing API keys from macOS Keychain."""
+    for field_name, account in _KEYCHAIN_KEY_FIELDS.items():
+        if getattr(settings, field_name) is None:
+            value = _read_keychain(account)
+            if value:
+                object.__setattr__(settings, field_name, value)
 
 
 # Global settings instance

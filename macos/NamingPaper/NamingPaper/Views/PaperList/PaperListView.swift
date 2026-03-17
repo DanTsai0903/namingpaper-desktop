@@ -87,9 +87,9 @@ struct PaperListView: View {
 
                 TableColumn("Authors", value: \.authors) { paper in
                     if searchTerms.isEmpty {
-                        Text(paper.authors)
+                        Text(paper.authorsDisplay)
                     } else {
-                        Text(highlightedText(paper.authors, terms: searchTerms))
+                        Text(highlightedText(paper.authorsDisplay, terms: searchTerms))
                     }
                 }
                 .width(min: 100, ideal: 150)

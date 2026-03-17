@@ -95,9 +95,9 @@ def get_provider(
             )
         case "omlx":
             model = model_name or settings.omlx_model or settings.model_name
-            from namingpaper.providers.omlx import OmlxProvider
+            from namingpaper.providers.omlx import oMLXProvider
 
-            return OmlxProvider(
+            return oMLXProvider(
                 model=model,
                 base_url=settings.omlx_base_url,
                 ocr_model=ocr_model or settings.omlx_ocr_model,

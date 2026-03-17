@@ -6,7 +6,7 @@
 
 ## 2. Provider Implementation
 
-- [x] 2.1 Create `src/namingpaper/providers/omlx.py` with `OmlxProvider(AIProvider)` class, `__init__` accepting model, base_url, and ocr_model params with defaults
+- [x] 2.1 Create `src/namingpaper/providers/omlx.py` with `oMLXProvider(AIProvider)` class, `__init__` accepting model, base_url, and ocr_model params with defaults
 - [x] 2.2 Implement `_call_omlx()` helper — HTTP POST to `/v1/chat/completions` via `httpx` with error handling (connection refused, 404, timeout, empty response)
 - [x] 2.3 Implement `_ocr_extract()` — send first-page image as base64 data URL in OpenAI vision format to the OCR model
 - [x] 2.4 Implement `_parse_metadata()` — send text + extraction prompt to the text model, parse JSON response
@@ -20,5 +20,5 @@
 
 ## 4. Testing
 
-- [x] 4.1 Add unit tests for `OmlxProvider` — mock httpx responses for text extraction, OCR, error cases
-- [x] 4.2 Verify `get_provider("omlx")` returns an `OmlxProvider` instance with correct defaults
+- [x] 4.1 Add unit tests for `oMLXProvider` — mock httpx responses for text extraction, OCR, error cases
+- [x] 4.2 Verify `get_provider("omlx")` returns an `oMLXProvider` instance with correct defaults
