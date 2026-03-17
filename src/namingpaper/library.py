@@ -47,6 +47,10 @@ async def add_paper(
     copy: bool = False,
     auto_yes: bool = False,
     execute: bool = False,
+    category_override: str | None = None,
+    filename_override: str | None = None,
+    no_rename: bool = False,
+    reasoning: bool | None = None,
 ) -> AddResult:
     """Add a paper to the library: extract → rename → summarize → categorize → file → persist.
 
@@ -77,7 +81,9 @@ async def add_paper(
     # 2. Get or create provider
     created_provider = False
     if provider is None:
-        provider = get_provider(provider_name, model_name=model_name, ocr_model=ocr_model)
+        provider = get_provider(
+            provider_name, model_name=model_name, ocr_model=ocr_model, reasoning=reasoning
+        )
         created_provider = True
 
     try:
@@ -87,7 +93,13 @@ async def add_paper(
         )
 
         # 4. Build filename
-        if template:
+        if filename_override:
+            filename = filename_override
+            if not filename.lower().endswith(".pdf"):
+                filename += ".pdf"
+        elif no_rename:
+            filename = pdf_path.name
+        elif template:
             from namingpaper.template import build_filename_from_template
             filename = build_filename_from_template(metadata, template)
         else:
@@ -98,11 +110,14 @@ async def add_paper(
         summary, keywords = await summarize_paper(content, provider)
 
         # 6. Categorize
-        categories = discover_categories(papers_dir)
-        suggested = await suggest_category(summary, keywords, categories, provider)
-        category = prompt_category_selection(
-            suggested, categories, auto_yes=auto_yes
-        )
+        if category_override:
+            category = category_override
+        else:
+            categories = discover_categories(papers_dir)
+            suggested = await suggest_category(summary, keywords, categories, provider)
+            category = prompt_category_selection(
+                suggested, categories, auto_yes=auto_yes
+            )
 
         # 7. Determine destination
         dest_dir = papers_dir / category
@@ -231,13 +246,15 @@ async def import_directory(
 def sync_library(
     db: Database,
     papers_dir: Path | None = None,
-) -> tuple[list[Path], list[Paper]]:
+    execute: bool = False,
+) -> tuple[list[Path], list[Paper], list[tuple[Paper, Path]]]:
     """Reconcile database with filesystem.
 
     Returns:
-        (untracked_files, missing_records)
+        (untracked_files, missing_records, moved_records)
         - untracked_files: PDFs in papers_dir not in database
         - missing_records: DB records whose files no longer exist
+        - moved_records: (paper, new_path) pairs where a file was moved
     """
     if papers_dir is None:
         papers_dir = get_settings().papers_dir
@@ -251,12 +268,44 @@ def sync_library(
     db_paths = {p.file_path for p in all_papers}
 
     # Untracked: on disk but not in DB
-    untracked = sorted(p for p in disk_files if str(p) not in db_paths)
+    untracked_files = [p for p in disk_files if str(p) not in db_paths]
 
     # Missing: in DB but not on disk
     missing = [p for p in all_papers if p.file_path not in disk_paths]
 
-    return untracked, missing
+    # Detect moved files: match missing DB records to untracked files by SHA256
+    moved: list[tuple[Paper, Path]] = []
+    if missing and untracked_files:
+        # Build hash → new_path map for untracked files
+        untracked_by_hash: dict[str, Path] = {}
+        for f in untracked_files:
+            h = compute_file_hash(f)
+            untracked_by_hash[h] = f
+
+        still_missing = []
+        for paper in missing:
+            new_path = untracked_by_hash.pop(paper.sha256, None)
+            if new_path is not None:
+                moved.append((paper, new_path))
+                if execute:
+                    # Derive new category from relative path
+                    rel = new_path.parent.relative_to(papers_dir)
+                    new_category = str(rel) if str(rel) != "." else ""
+                    db.update_paper(
+                        paper.id,
+                        file_path=str(new_path),
+                        category=new_category,
+                    )
+            else:
+                still_missing.append(paper)
+
+        missing = still_missing
+        # Remove matched files from untracked
+        matched_paths = {str(p) for _, p in moved}
+        untracked_files = [f for f in untracked_files if str(f) not in matched_paths]
+
+    untracked = sorted(untracked_files)
+    return untracked, missing, moved
 
 
 def remove_paper(

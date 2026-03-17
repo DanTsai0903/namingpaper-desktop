@@ -106,7 +106,7 @@ class TestLibraryE2E:
         db.create_paper(paper)
 
         # File doesn't actually exist at file_path
-        untracked, missing = sync_library(db, papers_dir)
+        untracked, missing, moved = sync_library(db, papers_dir)
         assert len(missing) == 1
         assert missing[0].id == paper.id
 
@@ -115,7 +115,7 @@ class TestLibraryE2E:
         pdf = papers_dir / "Finance" / "Asset Pricing" / "untracked.pdf"
         pdf.write_bytes(b"%PDF-1.4 untracked")
 
-        untracked, missing = sync_library(db, papers_dir)
+        untracked, missing, moved = sync_library(db, papers_dir)
         assert len(untracked) == 1
         assert untracked[0].name == "untracked.pdf"
 

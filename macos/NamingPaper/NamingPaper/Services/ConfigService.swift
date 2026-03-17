@@ -7,6 +7,17 @@ struct AppConfig {
     var apiKey: String
     var cliPath: String
 
+    /// The TOML key name for the API key based on provider
+    var apiKeyTOMLName: String {
+        switch provider {
+        case "gemini": return "gemini_api_key"
+        case "openai": return "openai_api_key"
+        case "claude": return "anthropic_api_key"
+        case "omlx": return "omlx_api_key"
+        default: return "api_key"
+        }
+    }
+
     static let `default` = AppConfig(
         papersDir: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Papers").path,
         provider: "ollama",
@@ -54,6 +65,10 @@ class ConfigService {
 
     // MARK: - Minimal TOML Parser
 
+    private let apiKeyNames: Set<String> = [
+        "api_key", "gemini_api_key", "openai_api_key", "anthropic_api_key", "claude_api_key", "omlx_api_key"
+    ]
+
     private func parseTOML(_ content: String) -> AppConfig {
         var config = AppConfig.default
         var currentSection = ""
@@ -84,7 +99,7 @@ class ConfigService {
             case "papers_dir": config.papersDir = value
             case "provider": config.provider = value
             case "model": config.model = value
-            case "api_key", "gemini_api_key", "openai_api_key", "claude_api_key":
+            case _ where apiKeyNames.contains(fullKey):
                 config.apiKey = value
             default: break
             }
@@ -103,6 +118,9 @@ class ConfigService {
         }
         if !config.model.isEmpty {
             lines.append("model = \"\(config.model)\"")
+        }
+        if !config.apiKey.isEmpty {
+            lines.append("\(config.apiKeyTOMLName) = \"\(config.apiKey)\"")
         }
         lines.append("")
         return lines
@@ -127,6 +145,14 @@ class ConfigService {
             case "model":
                 lines[i] = "model = \"\(config.model)\""
                 found.insert("model")
+            case _ where apiKeyNames.contains(key):
+                // Replace existing API key line with the correct provider-specific key
+                if !config.apiKey.isEmpty {
+                    lines[i] = "\(config.apiKeyTOMLName) = \"\(config.apiKey)\""
+                } else {
+                    lines[i] = "# \(key) removed"
+                }
+                found.insert("api_key")
             default: break
             }
         }
@@ -140,6 +166,9 @@ class ConfigService {
         }
         if !found.contains("model"), !config.model.isEmpty {
             lines.append("model = \"\(config.model)\"")
+        }
+        if !found.contains("api_key"), !config.apiKey.isEmpty {
+            lines.append("\(config.apiKeyTOMLName) = \"\(config.apiKey)\"")
         }
 
         return lines

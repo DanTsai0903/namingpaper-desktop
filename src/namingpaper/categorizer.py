@@ -17,14 +17,16 @@ CATEGORIZATION_PROMPT = """Given a paper with the following summary and keywords
 Summary: {summary}
 Keywords: {keywords}
 
-Existing categories:
+Existing categories (for reference only):
 {categories}
 
 Return ONLY valid JSON with:
-- category: string (the best matching existing category, or a new category path if none fit well)
+- category: string (the most accurate and descriptive category for this paper)
 
 Use "/" for nested categories (e.g., "Finance/Asset Pricing").
-If no existing category is appropriate, suggest a new one.
+You may use an existing category if it fits well, but DO NOT default to existing categories.
+If you can think of a more specific, accurate, or descriptive category name, use that instead.
+The goal is the best possible organization, not matching existing folders.
 
 Only return valid JSON, no other text."""
 

@@ -26,10 +26,14 @@ class OmlxProvider(AIProvider):
         model: str | None = None,
         base_url: str | None = None,
         ocr_model: str | None = None,
+        api_key: str | None = None,
+        reasoning: bool | None = None,
     ):
         self.text_model = model or self.DEFAULT_TEXT_MODEL
         self.ocr_model = ocr_model or self.DEFAULT_OCR_MODEL
         self.base_url = (base_url or self.DEFAULT_BASE_URL).rstrip("/")
+        self.api_key = api_key
+        self.reasoning = reasoning
         self._client: httpx.AsyncClient | None = None
 
     def _get_client(self) -> httpx.AsyncClient:
@@ -105,16 +109,28 @@ class OmlxProvider(AIProvider):
         result = await self._call_omlx(payload)
         return result["choices"][0]["message"]["content"]
 
+    def _build_payload(self, model: str, messages: list[dict], max_tokens: int = 2048) -> dict:
+        """Build a request payload, disabling thinking mode for Qwen3 models."""
+        payload: dict = {
+            "model": model,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "stream": False,
+        }
+        # Qwen3 models emit chain-of-thought by default, wasting tokens.
+        # Disable via chat_template_kwargs unless reasoning is explicitly enabled.
+        if "qwen3" in model.lower() and not self.reasoning:
+            payload["chat_template_kwargs"] = {"enable_thinking": False}
+        return payload
+
     async def _parse_metadata(self, text: str) -> PaperMetadata:
         """Parse metadata from text using text model."""
         prompt = f"Paper text:\n\n{text}\n\n{EXTRACTION_PROMPT}"
 
-        payload = {
-            "model": self.text_model,
-            "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": 1024,
-            "stream": False,
-        }
+        payload = self._build_payload(
+            self.text_model,
+            [{"role": "user", "content": prompt}],
+        )
 
         result = await self._call_omlx(payload)
         response_text = result["choices"][0]["message"]["content"]
@@ -128,12 +144,10 @@ class OmlxProvider(AIProvider):
 
     async def call_raw(self, prompt: str) -> str:
         """Send a raw prompt and return response text."""
-        payload = {
-            "model": self.text_model,
-            "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": 1024,
-            "stream": False,
-        }
+        payload = self._build_payload(
+            self.text_model,
+            [{"role": "user", "content": prompt}],
+        )
 
         result = await self._call_omlx(payload)
         response_text = result["choices"][0]["message"]["content"]
@@ -147,13 +161,25 @@ class OmlxProvider(AIProvider):
         """Make a request to oMLX's OpenAI-compatible API."""
         try:
             client = self._get_client()
+            headers = {}
+            if self.api_key:
+                headers["Authorization"] = f"Bearer {self.api_key}"
             response = await client.post(
                 f"{self.base_url}/v1/chat/completions",
                 json=payload,
+                headers=headers,
             )
             response.raise_for_status()
         except httpx.HTTPStatusError as e:
             model = payload.get("model", "unknown")
+            if e.response.status_code == 401:
+                raise RuntimeError(
+                    f"oMLX requires an API key.\n\n"
+                    f"Set it via environment variable:\n"
+                    f"  export NAMINGPAPER_OMLX_API_KEY=your-key\n\n"
+                    f"Or in ~/.namingpaper/config.toml:\n"
+                    f"  omlx_api_key = \"your-key\""
+                ) from e
             if e.response.status_code == 404:
                 raise RuntimeError(
                     f"Model '{model}' not found on oMLX server.\n\n"

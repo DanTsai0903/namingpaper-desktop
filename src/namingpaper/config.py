@@ -15,6 +15,7 @@ class Settings(BaseSettings):
         env_prefix="NAMINGPAPER_",
         env_file=".env",
         extra="ignore",
+        populate_by_name=True,
     )
 
     # API keys
@@ -23,11 +24,15 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = Field(default=None)
 
     # Provider selection
-    ai_provider: Literal["claude", "openai", "gemini", "ollama"] = Field(default="ollama")
+    ai_provider: Literal["claude", "openai", "gemini", "ollama", "omlx"] = Field(
+        default="ollama", alias="provider"
+    )
 
     # Extraction settings
     model_name: str | None = Field(
-        default=None, description="Override default model for provider"
+        default=None,
+        alias="model",
+        description="Fallback model override (prefer provider-specific model fields)",
     )
     max_text_chars: int = Field(
         default=8000, ge=100, le=100000, description="Max characters of text to send to AI"
@@ -39,13 +44,36 @@ class Settings(BaseSettings):
         description="Minimum confidence threshold; documents below this are skipped",
     )
 
+    # Claude settings
+    claude_model: str | None = Field(default=None, description="Model for Claude provider")
+
+    # OpenAI settings
+    openai_model: str | None = Field(default=None, description="Model for OpenAI provider")
+
+    # Gemini settings
+    gemini_model: str | None = Field(default=None, description="Model for Gemini provider")
+
     # Ollama settings
     ollama_base_url: str = Field(
         default="http://localhost:11434",
         description="Base URL for Ollama API",
     )
+    ollama_model: str | None = Field(default=None, description="Text model for Ollama")
     ollama_ocr_model: str | None = Field(
         default=None, description="Override OCR model for Ollama (default: deepseek-ocr)"
+    )
+
+    # oMLX settings
+    omlx_base_url: str = Field(
+        default="http://localhost:8000",
+        description="Base URL for oMLX API",
+    )
+    omlx_api_key: str | None = Field(
+        default=None, description="API key for oMLX (if --api-key is set on the server)"
+    )
+    omlx_model: str | None = Field(default=None, description="Text model for oMLX")
+    omlx_ocr_model: str | None = Field(
+        default=None, description="Override OCR model for oMLX (default: mlx-community/Qwen2.5-VL-7B-Instruct-4bit)"
     )
 
     # Filename formatting

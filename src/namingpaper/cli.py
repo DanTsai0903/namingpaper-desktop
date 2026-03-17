@@ -92,7 +92,7 @@ def rename(
         typer.Option(
             "--provider",
             "-p",
-            help="AI provider to use (claude, openai, gemini, ollama)",
+            help="AI provider to use (claude, openai, gemini, ollama, omlx)",
         ),
     ] = None,
     model: Annotated[
@@ -137,6 +137,10 @@ def rename(
             help="How to handle filename collisions",
         ),
     ] = CollisionStrategy.SKIP,
+    reasoning: Annotated[
+        bool | None,
+        typer.Option("--reasoning/--no-reasoning", help="Enable/disable reasoning mode"),
+    ] = None,
 ) -> None:
     """Rename a PDF file based on AI-extracted metadata.
 
@@ -160,7 +164,7 @@ def rename(
     # Extract metadata and plan rename
     with console.status("[bold blue]Extracting metadata..."):
         try:
-            operation = plan_rename_sync(pdf_path, provider_name=provider, model_name=model, ocr_model=ocr_model, keep_alive="0s")
+            operation = plan_rename_sync(pdf_path, provider_name=provider, model_name=model, ocr_model=ocr_model, keep_alive="0s", reasoning=reasoning)
         except LowConfidenceError as e:
             console.print(
                 f"[yellow]Skipped:[/yellow] {e}"
@@ -287,7 +291,7 @@ def batch(
         typer.Option(
             "--provider",
             "-p",
-            help="AI provider to use (claude, openai, gemini, ollama)",
+            help="AI provider to use (claude, openai, gemini, ollama, omlx)",
         ),
     ] = None,
     model: Annotated[
@@ -336,9 +340,9 @@ def batch(
         int,
         typer.Option(
             "--parallel",
-            help="Number of concurrent extractions (1 = sequential)",
+            help="Concurrent extractions (0 = auto: 4 for oMLX, 1 for others)",
         ),
-    ] = 1,
+    ] = 0,
     json_output: Annotated[
         bool,
         typer.Option(
@@ -647,7 +651,7 @@ def check(
         typer.Option(
             "--provider",
             "-p",
-            help="Provider to check (claude, openai, gemini, ollama)",
+            help="Provider to check (claude, openai, gemini, ollama, omlx)",
         ),
     ] = None,
 ) -> None:
@@ -708,6 +712,30 @@ def check(
                 f"  3. Pull the text model: ollama pull {text_model}\n"
                 f"  4. (Optional, for scanned PDFs) ollama pull {ocr_model}\n\n"
                 "Or use a different provider: namingpaper rename --provider claude <file>"
+            )
+            raise typer.Exit(1)
+    elif provider_name == "omlx":
+        text_model = settings.model_name or "mlx-community/Qwen3-8B-4bit"
+        ocr_model = settings.omlx_ocr_model or "mlx-community/Qwen2.5-VL-7B-Instruct-4bit"
+        base_url = settings.omlx_base_url
+
+        try:
+            resp = httpx.get(f"{base_url}/v1/models", timeout=5.0)
+            resp.raise_for_status()
+            table.add_row("oMLX server", "[green]OK[/green]", base_url)
+            table.add_row("Text model", "[green]SET[/green]", text_model)
+            table.add_row("OCR model", "[yellow]OPTIONAL[/yellow]", ocr_model)
+        except (httpx.ConnectError, httpx.HTTPError):
+            table.add_row("oMLX server", "[red]FAIL[/red]", f"Cannot connect to {base_url}")
+            all_ok = False
+
+            console.print(table)
+            console.print()
+            console.print(
+                "[yellow]oMLX is not reachable. To set up:[/yellow]\n"
+                "  1. Install oMLX: brew tap jundot/omlx && brew install omlx\n"
+                "  2. Start the server: brew services start omlx\n\n"
+                "Or use Ollama instead: namingpaper rename --provider ollama <file>"
             )
             raise typer.Exit(1)
     else:
@@ -978,10 +1006,26 @@ def add(
         str | None,
         typer.Option("--template", "-t", help="Filename template"),
     ] = None,
+    category: Annotated[
+        str | None,
+        typer.Option("--category", "-c", help="Override category (skip AI categorization)"),
+    ] = None,
     parallel: Annotated[
         int,
         typer.Option("--parallel", help="Concurrent extractions for directories (default: 1)"),
     ] = 1,
+    filename: Annotated[
+        str | None,
+        typer.Option("--filename", "-f", help="Override AI-generated filename"),
+    ] = None,
+    no_rename: Annotated[
+        bool,
+        typer.Option("--no-rename", help="Keep original filename (categorize only)"),
+    ] = False,
+    reasoning: Annotated[
+        bool | None,
+        typer.Option("--reasoning/--no-reasoning", help="Enable/disable reasoning mode"),
+    ] = None,
 ) -> None:
     """Add paper(s) to the library: rename, summarize, categorize, and file."""
     import asyncio
@@ -1014,7 +1058,9 @@ def add(
                 path, db=db,
                 provider_name=provider, model_name=model, ocr_model=ocr_model,
                 template=template, copy=copy_mode, auto_yes=yes,
-                execute=execute,
+                execute=execute, category_override=category,
+                filename_override=filename, no_rename=no_rename,
+                reasoning=reasoning,
             ))
 
             if result.skipped and result.existing:
@@ -1292,11 +1338,18 @@ def sync(
     from namingpaper.library import sync_library
 
     with Database() as db:
-        untracked, missing = sync_library(db)
+        untracked, missing, moved = sync_library(db, execute=execute)
 
-    if not untracked and not missing:
+    if not untracked and not missing and not moved:
         console.print("[green]Library is in sync.[/green]")
         return
+
+    if moved:
+        console.print(f"\n[green]{len(moved)} moved file(s){' updated' if execute else ' detected'}:[/green]")
+        for paper, new_path in moved[:10]:
+            console.print(f"  {paper.id}: → {new_path}")
+        if len(moved) > 10:
+            console.print(f"  ... and {len(moved) - 10} more")
 
     if untracked:
         console.print(f"\n[yellow]{len(untracked)} untracked file(s):[/yellow]")

@@ -164,9 +164,45 @@ class TestOmlxProviderErrors:
             await provider.extract_metadata(content)
 
 
+class TestOmlxReasoning:
+    def test_reasoning_default_disables_thinking(self):
+        provider = OmlxProvider()
+        payload = provider._build_payload(
+            "mlx-community/Qwen3-8B-4bit",
+            [{"role": "user", "content": "test"}],
+        )
+        assert payload["chat_template_kwargs"]["enable_thinking"] is False
+
+    def test_reasoning_none_disables_thinking(self):
+        provider = OmlxProvider(reasoning=None)
+        payload = provider._build_payload(
+            "mlx-community/Qwen3-8B-4bit",
+            [{"role": "user", "content": "test"}],
+        )
+        assert payload["chat_template_kwargs"]["enable_thinking"] is False
+
+    def test_reasoning_true_enables_thinking(self):
+        provider = OmlxProvider(reasoning=True)
+        payload = provider._build_payload(
+            "mlx-community/Qwen3-8B-4bit",
+            [{"role": "user", "content": "test"}],
+        )
+        assert "chat_template_kwargs" not in payload
+
+    def test_reasoning_non_qwen3_no_kwargs(self):
+        provider = OmlxProvider()
+        payload = provider._build_payload(
+            "mlx-community/Llama-3.2-3B-Instruct-4bit",
+            [{"role": "user", "content": "test"}],
+        )
+        assert "chat_template_kwargs" not in payload
+
+
 class TestGetProviderOmlx:
-    def test_get_provider_returns_omlx(self, monkeypatch):
+    def test_get_provider_returns_omlx(self, monkeypatch, tmp_path):
         monkeypatch.setenv("NAMINGPAPER_AI_PROVIDER", "omlx")
+        monkeypatch.delenv("NAMINGPAPER_MODEL_NAME", raising=False)
+        monkeypatch.setattr("namingpaper.config.Path.home", lambda: tmp_path)
         from namingpaper.config import reset_settings
         reset_settings()
 
@@ -175,5 +211,22 @@ class TestGetProviderOmlx:
         assert isinstance(provider, OmlxProvider)
         assert provider.base_url == "http://localhost:8000"
         assert provider.text_model == "mlx-community/Qwen3-8B-4bit"
+
+        reset_settings()
+
+    def test_get_provider_passes_reasoning(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("NAMINGPAPER_AI_PROVIDER", "omlx")
+        monkeypatch.delenv("NAMINGPAPER_MODEL_NAME", raising=False)
+        monkeypatch.setattr("namingpaper.config.Path.home", lambda: tmp_path)
+        from namingpaper.config import reset_settings
+        reset_settings()
+
+        from namingpaper.providers import get_provider
+        provider = get_provider("omlx", reasoning=True)
+        assert isinstance(provider, OmlxProvider)
+        assert provider.reasoning is True
+
+        provider2 = get_provider("omlx", reasoning=None)
+        assert provider2.reasoning is None
 
         reset_settings()

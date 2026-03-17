@@ -13,14 +13,15 @@ def get_provider(
     model_name: str | None = None,
     ocr_model: str | None = None,
     keep_alive: str | None = None,
+    reasoning: bool | None = None,
 ) -> "AIProvider":
     """Get an AI provider instance by name.
 
     Args:
-        provider_name: Provider name ("claude", "openai", "gemini", "ollama").
+        provider_name: Provider name ("claude", "openai", "gemini", "ollama", "omlx").
                       If None, uses the configured default.
-        model_name: Override the default model for the provider.
-        ocr_model: Override the Ollama OCR model.
+        model_name: Override the model for the provider (CLI --model).
+        ocr_model: Override the OCR model (Ollama/oMLX).
         keep_alive: Ollama keep_alive duration (e.g., "60s", "0s"). Only applies to Ollama.
 
     Returns:
@@ -31,10 +32,11 @@ def get_provider(
     """
     settings = get_settings()
     name = provider_name or settings.ai_provider
-    model = model_name or settings.model_name
 
+    # Model resolution: CLI --model > provider-specific config > global model_name
     match name:
         case "claude":
+            model = model_name or settings.claude_model or settings.model_name
             try:
                 from namingpaper.providers.claude import ClaudeProvider
             except ImportError:
@@ -50,6 +52,7 @@ def get_provider(
                 model=model,
             )
         case "openai":
+            model = model_name or settings.openai_model or settings.model_name
             try:
                 from namingpaper.providers.openai import OpenAIProvider
             except ImportError:
@@ -65,6 +68,7 @@ def get_provider(
                 model=model,
             )
         case "gemini":
+            model = model_name or settings.gemini_model or settings.model_name
             try:
                 from namingpaper.providers.gemini import GeminiProvider
             except ImportError:
@@ -80,6 +84,7 @@ def get_provider(
                 model=model,
             )
         case "ollama":
+            model = model_name or settings.ollama_model or settings.model_name
             from namingpaper.providers.ollama import OllamaProvider
 
             return OllamaProvider(
@@ -87,6 +92,17 @@ def get_provider(
                 base_url=settings.ollama_base_url,
                 ocr_model=ocr_model or settings.ollama_ocr_model,
                 keep_alive=keep_alive or "0s",  # Default to immediate unload
+            )
+        case "omlx":
+            model = model_name or settings.omlx_model or settings.model_name
+            from namingpaper.providers.omlx import OmlxProvider
+
+            return OmlxProvider(
+                model=model,
+                base_url=settings.omlx_base_url,
+                ocr_model=ocr_model or settings.omlx_ocr_model,
+                api_key=settings.omlx_api_key,
+                reasoning=reasoning,
             )
         case _:
             raise ValueError(f"Unknown provider: {name}")

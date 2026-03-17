@@ -21,9 +21,32 @@ struct Paper: Identifiable, Hashable {
         year.map(String.init) ?? ""
     }
 
+    /// Display-friendly authors string (strips JSON array brackets/quotes)
+    var authorsDisplay: String {
+        parseJSONArray(authors)?.joined(separator: ", ") ?? authors
+    }
+
+    /// Display-friendly full authors string
+    var authorsAllDisplay: String {
+        parseJSONArray(authorsAll)?.joined(separator: ", ") ?? authorsAll
+    }
+
     var keywordList: [String] {
         guard !keywords.isEmpty else { return [] }
+        // Handle JSON array format
+        if let parsed = parseJSONArray(keywords) {
+            return parsed
+        }
         return keywords.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+    }
+
+    private func parseJSONArray(_ str: String) -> [String]? {
+        guard str.hasPrefix("["),
+              let data = str.data(using: .utf8),
+              let array = try? JSONSerialization.jsonObject(with: data) as? [String] else {
+            return nil
+        }
+        return array
     }
 
     var pdfURL: URL? {

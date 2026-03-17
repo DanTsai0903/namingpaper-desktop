@@ -10,6 +10,7 @@ from namingpaper.models import PDFContent, PaperMetadata
 
 _RE_JSON_BLOCK = re.compile(r"```json\s*(.*?)```", re.DOTALL)
 _RE_CODE_BLOCK = re.compile(r"```\s*(.*?)```", re.DOTALL)
+_RE_JSON_OBJECT = re.compile(r"\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}", re.DOTALL)
 
 
 EXTRACTION_PROMPT = """Extract metadata from this academic paper.
@@ -87,11 +88,23 @@ class AIProvider(ABC):
 
         try:
             data = json.loads(json_text.strip())
-        except json.JSONDecodeError as e:
-            raise RuntimeError(
-                f"Failed to parse JSON from {provider_name} response: {e}\n"
-                f"Response: {response_text[:500]}"
-            ) from e
+        except json.JSONDecodeError:
+            # Fallback: find the first JSON object in the response
+            # (handles models that emit thinking/reasoning before JSON)
+            obj_match = _RE_JSON_OBJECT.search(response_text)
+            if obj_match:
+                try:
+                    data = json.loads(obj_match.group())
+                except json.JSONDecodeError as e2:
+                    raise RuntimeError(
+                        f"Failed to parse JSON from {provider_name} response: {e2}\n"
+                        f"Response: {response_text[:500]}"
+                    ) from e2
+            else:
+                raise RuntimeError(
+                    f"No JSON found in {provider_name} response.\n"
+                    f"Response: {response_text[:500]}"
+                )
 
         try:
             return PaperMetadata(**data)

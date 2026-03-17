@@ -7,29 +7,28 @@ from namingpaper.models import PDFContent, PaperMetadata
 from namingpaper.providers.base import AIProvider, EXTRACTION_PROMPT
 
 try:
-    import google.generativeai as genai
-    from PIL import Image
-    import io
+    from google import genai
+    from google.genai import types
 
     GEMINI_AVAILABLE = True
 except ImportError:
     GEMINI_AVAILABLE = False
     genai = None
+    types = None
 
 
 class GeminiProvider(AIProvider):
     """Google Gemini provider."""
 
-    DEFAULT_MODEL = "gemini-1.5-flash"
+    DEFAULT_MODEL = "gemini-2.0-flash"
 
     def __init__(self, api_key: str, model: str | None = None):
         if not GEMINI_AVAILABLE:
             raise ImportError(
                 "Gemini package not installed. Run: pip install namingpaper[gemini]"
             )
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel(model or self.DEFAULT_MODEL)
-        self._request_options = {"timeout": 120}
+        self.client = genai.Client(api_key=api_key)
+        self.model_name = model or self.DEFAULT_MODEL
 
     async def extract_metadata(self, content: PDFContent) -> PaperMetadata:
         """Extract metadata using Gemini."""
@@ -41,18 +40,22 @@ class GeminiProvider(AIProvider):
 
         # Add image if available
         if content.first_page_image:
-            image = Image.open(io.BytesIO(content.first_page_image))
-            parts.append(image)
+            parts.append(
+                types.Part.from_bytes(
+                    data=content.first_page_image,
+                    mime_type="image/png",
+                )
+            )
 
         # Add text and prompt
         parts.append(f"Paper text:\n\n{text}\n\n{EXTRACTION_PROMPT}")
 
-        # Call Gemini API (sync client run in thread to avoid blocking event loop)
+        # Call Gemini API in thread to avoid blocking event loop
         try:
             response = await asyncio.to_thread(
-                self.model.generate_content,
-                parts,
-                request_options=self._request_options,
+                self.client.models.generate_content,
+                model=self.model_name,
+                contents=parts,
             )
         except Exception as e:
             err = str(e).lower()
@@ -67,12 +70,7 @@ class GeminiProvider(AIProvider):
             raise
 
         # Parse response
-        try:
-            response_text = response.text
-        except ValueError as e:
-            raise RuntimeError(
-                f"Gemini returned no usable response (may have been blocked by safety filters): {e}"
-            ) from e
+        response_text = response.text
         if not response_text:
             raise RuntimeError("Gemini returned an empty response.")
 
@@ -82,9 +80,9 @@ class GeminiProvider(AIProvider):
         """Send a raw prompt and return response text."""
         try:
             response = await asyncio.to_thread(
-                self.model.generate_content,
-                prompt,
-                request_options=self._request_options,
+                self.client.models.generate_content,
+                model=self.model_name,
+                contents=prompt,
             )
         except Exception as e:
             err = str(e).lower()
@@ -93,12 +91,7 @@ class GeminiProvider(AIProvider):
                     "Invalid Gemini API key. Check your NAMINGPAPER_GEMINI_API_KEY."
                 ) from e
             raise
-        try:
-            response_text = response.text
-        except ValueError as e:
-            raise RuntimeError(
-                f"Gemini returned no usable response: {e}"
-            ) from e
+        response_text = response.text
         if not response_text:
             raise RuntimeError("Gemini returned an empty response.")
         return response_text
