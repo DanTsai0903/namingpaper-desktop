@@ -1026,11 +1026,32 @@ def add(
         bool | None,
         typer.Option("--reasoning/--no-reasoning", help="Enable/disable reasoning mode"),
     ] = None,
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="Output results as JSON"),
+    ] = False,
+    metadata_json: Annotated[
+        str | None,
+        typer.Option("--metadata-json", help="Pre-extracted metadata as JSON (skip AI extraction)"),
+    ] = None,
 ) -> None:
     """Add paper(s) to the library: rename, summarize, categorize, and file."""
     import asyncio
+    import json
     from namingpaper.database import Database
     from namingpaper.library import add_paper as _add_paper, import_directory
+
+    # Parse pre-extracted metadata JSON
+    pre_extracted = None
+    if metadata_json:
+        try:
+            pre_extracted = json.loads(metadata_json)
+        except json.JSONDecodeError as e:
+            if json_output:
+                print(json.dumps({"status": "error", "error": f"Invalid --metadata-json: {e}"}))
+            else:
+                console.print(f"[red]Error:[/red] Invalid --metadata-json: {e}")
+            raise typer.Exit(1)
 
     with Database() as db:
         if path.is_dir():
@@ -1051,7 +1072,10 @@ def add(
             )
         else:
             if path.suffix.lower() != ".pdf":
-                console.print(f"[red]Error:[/red] Not a PDF file: {path}")
+                if json_output:
+                    print(json.dumps({"status": "error", "error": f"Not a PDF file: {path}"}))
+                else:
+                    console.print(f"[red]Error:[/red] Not a PDF file: {path}")
                 raise typer.Exit(1)
 
             result = asyncio.run(_add_paper(
@@ -1061,37 +1085,69 @@ def add(
                 execute=execute, category_override=category,
                 filename_override=filename, no_rename=no_rename,
                 reasoning=reasoning,
+                pre_extracted=pre_extracted,
             ))
 
             if result.skipped and result.existing:
-                console.print(
-                    f"[yellow]Already in library:[/yellow] {result.existing.file_path}"
-                )
+                if json_output:
+                    print(json.dumps({
+                        "status": "skipped",
+                        "existing_id": result.existing.id,
+                        "source": str(path),
+                    }))
+                else:
+                    console.print(
+                        f"[yellow]Already in library:[/yellow] {result.existing.file_path}"
+                    )
                 return
 
             if result.error:
-                console.print(f"[red]Error:[/red] {result.error}")
+                if json_output:
+                    print(json.dumps({"status": "error", "error": result.error, "source": str(path)}))
+                else:
+                    console.print(f"[red]Error:[/red] {result.error}")
                 raise typer.Exit(1)
 
             if result.paper:
                 paper = result.paper
-                table = Table(show_header=False)
-                table.add_column("Field", style="cyan")
-                table.add_column("Value")
-                table.add_row("Title", paper.title)
-                table.add_row("Authors", ", ".join(paper.authors))
-                table.add_row("Year", str(paper.year))
-                table.add_row("Journal", paper.journal)
-                if paper.summary:
-                    table.add_row("Summary", paper.summary)
-                if paper.keywords:
-                    table.add_row("Keywords", ", ".join(paper.keywords))
-                table.add_row("Category", paper.category or "Unsorted")
-                table.add_row("Destination", paper.file_path)
-                console.print(table)
 
-                if not execute:
-                    console.print("\n[dim]Dry run mode. Use --execute to add to library.[/dim]")
+                if json_output:
+                    print(json.dumps({
+                        "status": "ok",
+                        "source": str(path),
+                        "paper": {
+                            "title": paper.title,
+                            "authors": paper.authors,
+                            "authors_full": paper.authors_full,
+                            "year": paper.year,
+                            "journal": paper.journal,
+                            "journal_abbrev": paper.journal_abbrev,
+                            "summary": paper.summary,
+                            "keywords": paper.keywords,
+                            "category": paper.category,
+                            "filename": Path(paper.file_path).name,
+                            "destination": paper.file_path,
+                            "confidence": paper.confidence,
+                        },
+                    }))
+                else:
+                    table = Table(show_header=False)
+                    table.add_column("Field", style="cyan")
+                    table.add_column("Value")
+                    table.add_row("Title", paper.title)
+                    table.add_row("Authors", ", ".join(paper.authors))
+                    table.add_row("Year", str(paper.year))
+                    table.add_row("Journal", paper.journal)
+                    if paper.summary:
+                        table.add_row("Summary", paper.summary)
+                    if paper.keywords:
+                        table.add_row("Keywords", ", ".join(paper.keywords))
+                    table.add_row("Category", paper.category or "Unsorted")
+                    table.add_row("Destination", paper.file_path)
+                    console.print(table)
+
+                    if not execute:
+                        console.print("\n[dim]Dry run mode. Use --execute to add to library.[/dim]")
 
 
 @app.command()

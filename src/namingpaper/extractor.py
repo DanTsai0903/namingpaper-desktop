@@ -50,16 +50,28 @@ async def extract_metadata(
 
     # Extract metadata using AI
     try:
-        metadata = await provider.extract_metadata(content)
+        metadata = await extract_metadata_from_content(content, provider)
     finally:
         if created_provider and hasattr(provider, "aclose"):
             await provider.aclose()
 
-    # Check confidence threshold
+    return metadata
+
+
+async def extract_metadata_from_content(
+    content: PDFContent,
+    provider: AIProvider,
+) -> PaperMetadata:
+    """Extract metadata from already-loaded PDF content."""
+    metadata = await provider.extract_metadata(content)
+    return enforce_confidence_threshold(metadata)
+
+
+def enforce_confidence_threshold(metadata: PaperMetadata) -> PaperMetadata:
+    """Raise when extracted metadata falls below the configured threshold."""
     settings = get_settings()
     if metadata.confidence < settings.min_confidence:
         raise LowConfidenceError(metadata.confidence, settings.min_confidence)
-
     return metadata
 
 

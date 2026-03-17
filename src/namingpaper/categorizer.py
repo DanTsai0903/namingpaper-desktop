@@ -35,7 +35,8 @@ def discover_categories(papers_dir: Path) -> list[str]:
     """Scan papers_dir subdirectories to find existing categories.
 
     Returns category paths relative to papers_dir (e.g., "Finance/Asset Pricing").
-    Excludes the "Unsorted" directory.
+    Excludes the "Unsorted" directory and skips intermediate folders that only
+    exist to group more specific categories.
     """
     categories: list[str] = []
     if not papers_dir.is_dir():
@@ -48,8 +49,19 @@ def discover_categories(papers_dir: Path) -> list[str]:
         name = str(rel)
         if name == "Unsorted" or name.startswith("Unsorted/"):
             continue
-        # Only include leaf directories or directories that contain PDFs
-        categories.append(name)
+        try:
+            children = list(path.iterdir())
+        except OSError:
+            continue
+
+        has_pdf = any(
+            child.is_file() and child.suffix.lower() == ".pdf" for child in children
+        )
+        has_child_dir = any(child.is_dir() for child in children)
+
+        # Only include leaf directories or directories that directly contain PDFs.
+        if has_pdf or not has_child_dir:
+            categories.append(name)
 
     return categories
 

@@ -46,7 +46,7 @@ class OpenAIProvider(AIProvider):
         )
 
         # Add image if available
-        if content.first_page_image:
+        if self._should_include_image(content):
             image_data = base64.standard_b64encode(content.first_page_image).decode(
                 "utf-8"
             )

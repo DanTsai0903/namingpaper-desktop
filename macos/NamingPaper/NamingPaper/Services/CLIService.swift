@@ -30,6 +30,8 @@ struct AddPaperResult {
     var authors: String
     var year: String
     var journal: String
+    /// Cached JSON metadata from dry-run to pass on commit (avoids re-extraction)
+    var cachedMetadataJSON: String?
 
     init(from dryRun: CLIService.DryRunResult) {
         self.suggestedName = dryRun.suggestedName
@@ -41,10 +43,62 @@ struct AddPaperResult {
         self.year = dryRun.year
         self.journal = dryRun.journal
     }
+
+    init(from paper: CLIService.AddPaperJSONPaper) {
+        self.suggestedName = paper.filename
+        self.suggestedCategory = paper.category ?? ""
+        self.editedName = paper.filename
+        self.editedCategory = paper.category ?? ""
+        self.title = paper.title
+        self.authors = paper.authors.joined(separator: ", ")
+        self.year = String(paper.year)
+        self.journal = paper.journal
+
+        // Build the cached metadata JSON using Codable for type safety
+        let cached = PreExtractedMetadata(
+            title: paper.title,
+            authors: paper.authors,
+            authorsFullNames: paper.authorsFullNames,
+            year: paper.year,
+            journal: paper.journal,
+            journalAbbrev: paper.journalAbbrev,
+            summary: paper.summary,
+            keywords: paper.keywords ?? [],
+            category: paper.category,
+            confidence: paper.confidence
+        )
+        if let data = try? JSONEncoder().encode(cached),
+           let str = String(data: data, encoding: .utf8) {
+            self.cachedMetadataJSON = str
+        }
+    }
+}
+
+/// Codable struct for serializing cached metadata to pass via --metadata-json.
+/// Keys match what the Python CLI expects in `pre_extracted`.
+struct PreExtractedMetadata: Codable {
+    let title: String
+    let authors: [String]
+    let authorsFullNames: [String]
+    let year: Int
+    let journal: String
+    let journalAbbrev: String?
+    let summary: String?
+    let keywords: [String]
+    let category: String?
+    let confidence: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case title, authors, year, journal, summary, keywords, category, confidence
+        case authorsFullNames = "authors_full"
+        case journalAbbrev = "journal_abbrev"
+    }
 }
 
 struct AddPaperOptions {
+    var selectedSavedProviderID: UUID?
     var provider: String = ""
+    var model: String = ""
     var template: String = "default"
     var categoryPriority: Bool = false
     var reasoning: Bool = false
@@ -161,20 +215,61 @@ actor CLIService {
         }
     }
 
+    // MARK: - JSON Result Types
+
+    struct AddPaperJSONPaper: Codable {
+        let title: String
+        let authors: [String]
+        let authorsFullNames: [String]
+        let year: Int
+        let journal: String
+        let journalAbbrev: String?
+        let summary: String?
+        let keywords: [String]?
+        let category: String?
+        let filename: String
+        let destination: String
+        let confidence: Double?
+
+        enum CodingKeys: String, CodingKey {
+            case title, authors, year, journal, summary, keywords, category, filename, destination, confidence
+            case authorsFullNames = "authors_full"
+            case journalAbbrev = "journal_abbrev"
+        }
+    }
+
+    struct AddPaperJSONResult: Codable {
+        let status: String
+        let source: String?
+        let error: String?
+        let existingId: String?
+        let paper: AddPaperJSONPaper?
+
+        enum CodingKeys: String, CodingKey {
+            case status, source, error, paper
+            case existingId = "existing_id"
+        }
+    }
+
     // MARK: - Add Paper
 
     func addPaper(
         path: String,
         provider: String? = nil,
+        model: String? = nil,
         category: String? = nil,
         template: String? = nil,
         filename: String? = nil,
         noRename: Bool = false,
-        reasoning: Bool? = nil
+        reasoning: Bool? = nil,
+        metadataJSON: String? = nil
     ) async throws -> CLIResult {
         var args = ["add", path, "--execute", "--yes", "--copy"]
         if let provider, !provider.isEmpty {
             args += ["--provider", provider]
+        }
+        if let model, !model.isEmpty {
+            args += ["--model", model]
         }
         if let category, !category.isEmpty {
             args += ["--category", category]
@@ -190,6 +285,9 @@ actor CLIService {
         }
         if let reasoning {
             args.append(reasoning ? "--reasoning" : "--no-reasoning")
+        }
+        if let metadataJSON, !metadataJSON.isEmpty {
+            args += ["--metadata-json", metadataJSON]
         }
         return try await run(arguments: args)
     }
@@ -209,13 +307,17 @@ actor CLIService {
     func dryRunAddPaper(
         path: String,
         provider: String? = nil,
+        model: String? = nil,
         template: String? = nil,
         noRename: Bool = false,
         reasoning: Bool? = nil
     ) async throws -> CLIResult {
-        var args = ["add", path, "--copy", "--yes"]
+        var args = ["add", path, "--copy", "--yes", "--json"]
         if let provider, !provider.isEmpty {
             args += ["--provider", provider]
+        }
+        if let model, !model.isEmpty {
+            args += ["--model", model]
         }
         if let template, !template.isEmpty {
             args += ["--template", template]
@@ -227,6 +329,12 @@ actor CLIService {
             args.append(reasoning ? "--reasoning" : "--no-reasoning")
         }
         return try await run(arguments: args)
+    }
+
+    /// Parse JSON output from `add --json`. Returns nil if JSON parsing fails (fallback to Rich table).
+    static func parseJSONOutput(_ stdout: String) -> AddPaperJSONResult? {
+        guard let data = stdout.data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode(AddPaperJSONResult.self, from: data)
     }
 
     static func parseDryRunOutput(_ stdout: String) -> DryRunResult? {

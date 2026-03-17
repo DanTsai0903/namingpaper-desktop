@@ -11,13 +11,20 @@ from namingpaper.categorizer import (
 )
 from namingpaper.config import get_settings
 from namingpaper.database import Database, compute_file_hash, generate_paper_id
-from namingpaper.extractor import extract_metadata
+from namingpaper.extractor import (
+    enforce_confidence_threshold,
+    extract_metadata_from_content,
+)
 from namingpaper.formatter import build_filename
 from namingpaper.models import Paper, PaperMetadata, SearchFilter
 from namingpaper.pdf_reader import extract_pdf_content
 from namingpaper.providers import get_provider
 from namingpaper.providers.base import AIProvider
-from namingpaper.summarizer import summarize_paper
+from namingpaper.summarizer import (
+    PaperAnalysisParseError,
+    analyze_paper,
+    summarize_paper,
+)
 
 
 class AddResult:
@@ -51,6 +58,7 @@ async def add_paper(
     filename_override: str | None = None,
     no_rename: bool = False,
     reasoning: bool | None = None,
+    pre_extracted: dict | None = None,
 ) -> AddResult:
     """Add a paper to the library: extract → rename → summarize → categorize → file → persist.
 
@@ -78,19 +86,60 @@ async def add_paper(
     if existing:
         return AddResult(skipped=True, existing=existing)
 
-    # 2. Get or create provider
+    # Check what we can skip via pre_extracted data
+    has_pre_metadata = (
+        pre_extracted
+        and pre_extracted.get("title")
+        and pre_extracted.get("authors")
+        and pre_extracted.get("year")
+    )
+    has_pre_summary = pre_extracted and pre_extracted.get("summary") is not None
+    has_pre_category = pre_extracted and pre_extracted.get("category") is not None
+
+    # 2. Get or create provider (skip entirely if all data is pre-extracted)
+    need_provider = not has_pre_metadata or not has_pre_summary or (
+        not has_pre_category and not category_override
+    )
     created_provider = False
-    if provider is None:
+    if need_provider and provider is None:
         provider = get_provider(
             provider_name, model_name=model_name, ocr_model=ocr_model, reasoning=reasoning
         )
         created_provider = True
 
     try:
-        # 3. Extract metadata (reuses existing pipeline)
-        metadata = await extract_metadata(
-            pdf_path, provider=provider, model_name=model_name, ocr_model=ocr_model
-        )
+        content = None
+        if not has_pre_metadata or not has_pre_summary:
+            content = extract_pdf_content(pdf_path)
+
+        combined_analysis: tuple[PaperMetadata, str | None, list[str]] | None = None
+        if (
+            content is not None
+            and provider is not None
+            and not has_pre_metadata
+            and not has_pre_summary
+            and provider._has_usable_text(content.text)
+        ):
+            try:
+                combined_analysis = await analyze_paper(content, provider)
+            except PaperAnalysisParseError:
+                combined_analysis = None
+
+        # 3. Extract metadata or use pre-extracted
+        if has_pre_metadata:
+            metadata = PaperMetadata(
+                title=pre_extracted["title"],
+                authors=pre_extracted["authors"],
+                authors_full=pre_extracted.get("authors_full", []),
+                year=pre_extracted["year"],
+                journal=pre_extracted.get("journal", ""),
+                journal_abbrev=pre_extracted.get("journal_abbrev"),
+                confidence=pre_extracted.get("confidence", 1.0),
+            )
+        elif combined_analysis is not None:
+            metadata = enforce_confidence_threshold(combined_analysis[0])
+        else:
+            metadata = await extract_metadata_from_content(content, provider)
 
         # 4. Build filename
         if filename_override:
@@ -105,13 +154,21 @@ async def add_paper(
         else:
             filename = build_filename(metadata)
 
-        # 5. Summarize
-        content = extract_pdf_content(pdf_path)
-        summary, keywords = await summarize_paper(content, provider)
+        # 5. Summarize or use pre-extracted
+        if has_pre_summary:
+            summary = pre_extracted["summary"]
+            keywords = pre_extracted.get("keywords", [])
+        elif combined_analysis is not None:
+            summary = combined_analysis[1]
+            keywords = combined_analysis[2]
+        else:
+            summary, keywords = await summarize_paper(content, provider)
 
         # 6. Categorize
         if category_override:
             category = category_override
+        elif has_pre_category:
+            category = pre_extracted["category"]
         else:
             categories = discover_categories(papers_dir)
             suggested = await suggest_category(summary, keywords, categories, provider)

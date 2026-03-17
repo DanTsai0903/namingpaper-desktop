@@ -39,7 +39,7 @@ class GeminiProvider(AIProvider):
         parts = []
 
         # Add image if available
-        if content.first_page_image:
+        if self._should_include_image(content):
             parts.append(
                 types.Part.from_bytes(
                     data=content.first_page_image,

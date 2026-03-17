@@ -4,8 +4,16 @@ struct AddPaperSheet: View {
     @Environment(LibraryViewModel.self) var viewModel
     @Environment(\.dismiss) var dismiss
 
-    private let providers = ["", "claude", "openai", "gemini", "ollama", "omlx"]
+    @State private var savedProviders: [SavedProvider] = []
     private let templates = ["default", "compact", "full", "simple"]
+
+    private func providerDisplayName(_ id: String) -> String {
+        switch id {
+        case "omlx": return "oMLX"
+        case "ollama": return "ollama"
+        default: return id.capitalized
+        }
+    }
 
     var body: some View {
         @Bindable var addVM = viewModel.addPaperViewModel
@@ -37,6 +45,10 @@ struct AddPaperSheet: View {
         .frame(minWidth: 600, minHeight: 400, maxHeight: 650)
         .onAppear {
             addVM.existingCategories = viewModel.categories.map(\.name)
+            if let data = UserDefaults.standard.data(forKey: "savedProviders"),
+               let decoded = try? JSONDecoder().decode([SavedProvider].self, from: data) {
+                savedProviders = decoded
+            }
         }
     }
 
@@ -69,10 +81,23 @@ struct AddPaperSheet: View {
 
             // Options
             Form {
-                Picker("Provider", selection: $addVM.options.provider) {
-                    Text("Default").tag("")
-                    ForEach(providers.dropFirst(), id: \.self) { p in
-                        Text(p).tag(p)
+                Picker("Model", selection: $addVM.options.selectedSavedProviderID) {
+                    Text("Default").tag(UUID?.none)
+                    ForEach(savedProviders) { sp in
+                        Text("\(sp.name) (\(providerDisplayName(sp.provider)))")
+                            .tag(UUID?.some(sp.id))
+                    }
+                }
+                .onChange(of: addVM.options.selectedSavedProviderID) { _, newID in
+                    if let id = newID, let sp = savedProviders.first(where: { $0.id == id }) {
+                        addVM.options.provider = sp.provider
+                        addVM.options.model = sp.model
+                        // Set the API key for the CLI via Keychain
+                        let config = ConfigService.shared.readConfig()
+                        KeychainService.save(key: sp.apiKey, account: config.apiKeyTOMLName)
+                    } else {
+                        addVM.options.provider = ""
+                        addVM.options.model = ""
                     }
                 }
 

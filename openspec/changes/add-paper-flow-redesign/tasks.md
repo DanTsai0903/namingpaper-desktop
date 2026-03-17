@@ -1,3 +1,5 @@
+# Tasks
+
 ## 1. CLI: New flags
 
 - [x] 1.1 Add `--filename` / `-f` option to the `add` command in `cli.py`; pass it through to `library.add_paper()` as `filename_override`

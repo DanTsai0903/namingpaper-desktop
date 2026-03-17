@@ -12,15 +12,25 @@ from namingpaper.categorizer import (
 
 
 class TestDiscoverCategories:
-    def test_discovers_nested_folders(self, tmp_path):
+    def test_discovers_leaf_folders(self, tmp_path):
         (tmp_path / "Finance" / "Asset Pricing").mkdir(parents=True)
         (tmp_path / "Finance" / "Empirical").mkdir(parents=True)
         (tmp_path / "Machine Learning" / "NLP").mkdir(parents=True)
         categories = discover_categories(tmp_path)
-        assert "Finance" in categories
+        assert "Finance" not in categories
         assert "Finance/Asset Pricing" in categories
         assert "Finance/Empirical" in categories
+        assert "Machine Learning" not in categories
         assert "Machine Learning/NLP" in categories
+
+    def test_keeps_parent_when_it_contains_pdfs(self, tmp_path):
+        (tmp_path / "Finance" / "Asset Pricing").mkdir(parents=True)
+        (tmp_path / "Finance" / "overview.pdf").write_bytes(b"%PDF-1.4")
+
+        categories = discover_categories(tmp_path)
+
+        assert "Finance" in categories
+        assert "Finance/Asset Pricing" in categories
 
     def test_excludes_unsorted(self, tmp_path):
         (tmp_path / "Unsorted").mkdir()

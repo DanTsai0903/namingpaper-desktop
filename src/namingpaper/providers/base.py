@@ -44,6 +44,8 @@ Only return valid JSON, no other text."""
 class AIProvider(ABC):
     """Abstract base class for AI providers."""
 
+    IMAGE_FALLBACK_MIN_TEXT_CHARS = 100
+
     @abstractmethod
     async def extract_metadata(self, content: PDFContent) -> PaperMetadata:
         """Extract paper metadata using the AI model.
@@ -61,6 +63,19 @@ class AIProvider(ABC):
         if len(text) <= max_chars:
             return text
         return text[:max_chars] + "\n\n[Text truncated...]"
+
+    def _has_usable_text(self, text: str | None, min_chars: int | None = None) -> bool:
+        """Return True when PDF text extraction is good enough to skip vision input."""
+        threshold = min_chars or self.IMAGE_FALLBACK_MIN_TEXT_CHARS
+        return bool(text and len(text.strip()) > threshold)
+
+    def _should_include_image(
+        self, content: PDFContent, min_chars: int | None = None
+    ) -> bool:
+        """Only include the page image when text extraction looks insufficient."""
+        return bool(content.first_page_image) and not self._has_usable_text(
+            content.text, min_chars=min_chars
+        )
 
     async def call_raw(self, prompt: str) -> str:
         """Send a raw prompt and return the response text.

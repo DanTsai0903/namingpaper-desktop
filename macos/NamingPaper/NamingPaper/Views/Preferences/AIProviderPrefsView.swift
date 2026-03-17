@@ -29,8 +29,17 @@ struct AIProviderPrefsView: View {
     @State private var editModel: String = ""
     @State private var editApiKey: String = ""
     @State private var saveConfirmation: Bool = false
+    @State private var nameCollisionWarning: Bool = false
 
     private let providers = ["ollama", "omlx", "claude", "openai", "gemini"]
+
+    private func providerDisplayName(_ id: String) -> String {
+        switch id {
+        case "omlx": return "oMLX"
+        case "ollama": return "ollama"
+        default: return id.capitalized
+        }
+    }
 
     var body: some View {
         HSplitView {
@@ -42,7 +51,7 @@ struct AIProviderPrefsView: View {
                             VStack(alignment: .leading) {
                                 Text(item.name)
                                     .fontWeight(isActive(item) ? .semibold : .regular)
-                                Text(item.provider.capitalized)
+                                Text(providerDisplayName(item.provider))
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -99,10 +108,19 @@ struct AIProviderPrefsView: View {
                 Section("Configuration") {
                     TextField("Name", text: $editName, prompt: Text("Model 1"))
                         .textFieldStyle(.roundedBorder)
+                        .onChange(of: editName) { _, newName in
+                            nameCollisionWarning = hasNameCollision(newName)
+                        }
+
+                    if nameCollisionWarning {
+                        Text("A model with this name already exists")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
 
                     Picker("AI Provider", selection: $editProvider) {
                         ForEach(providers, id: \.self) { p in
-                            Text(p.capitalized).tag(p)
+                            Text(providerDisplayName(p)).tag(p)
                         }
                     }
 
@@ -128,7 +146,7 @@ struct AIProviderPrefsView: View {
                                 saveConfirmation = false
                             }
                         }
-                        .disabled(selectedID == nil)
+                        .disabled(selectedID == nil || nameCollisionWarning)
 
                         Button("Use This Provider") {
                             saveCurrentEdit()
@@ -136,7 +154,7 @@ struct AIProviderPrefsView: View {
                                 activate(item)
                             }
                         }
-                        .disabled(selectedID == nil)
+                        .disabled(selectedID == nil || nameCollisionWarning)
 
                         if saveConfirmation {
                             Label("Saved", systemImage: "checkmark.circle.fill")
@@ -163,9 +181,9 @@ struct AIProviderPrefsView: View {
 
     private var apiKeyPlaceholder: String {
         switch editProvider {
-        case "ollama": return "Not required for Ollama"
+        case "ollama": return "Not required for ollama"
         case "omlx": return "Optional — only if oMLX has --api-key set"
-        default: return "Enter \(editProvider.capitalized) API key"
+        default: return "Enter \(providerDisplayName(editProvider)) API key"
         }
     }
 
@@ -176,15 +194,35 @@ struct AIProviderPrefsView: View {
     // MARK: - Actions
 
     private func addNew() {
-        let index = savedProviders.count + 1
-        let new = SavedProvider(name: "Model \(index)", provider: "ollama", model: "")
+        let name = nextUniqueName()
+        let new = SavedProvider(name: name, provider: "ollama", model: "")
         savedProviders.append(new)
         selectedID = new.id
         persistSavedProviders()
     }
 
+    private func nextUniqueName() -> String {
+        let existingNames = Set(savedProviders.map { $0.name })
+        var index = savedProviders.count + 1
+        while existingNames.contains("Model \(index)") {
+            index += 1
+        }
+        return "Model \(index)"
+    }
+
+    private func hasNameCollision(_ name: String) -> Bool {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return false }
+        return savedProviders.contains { $0.id != selectedID && $0.name == trimmed }
+    }
+
     private func delete(_ item: SavedProvider?) {
         guard let item else { return }
+        // If deleting the active model, clear the CLI's well-known API key
+        if isActive(item) {
+            let config = ConfigService.shared.readConfig()
+            KeychainService.delete(account: config.apiKeyTOMLName)
+        }
         KeychainService.delete(account: item.id.uuidString)
         savedProviders.removeAll { $0.id == item.id }
         if selectedID == item.id {
@@ -209,7 +247,9 @@ struct AIProviderPrefsView: View {
     private func saveCurrentEdit() {
         guard let id = selectedID,
               let idx = savedProviders.firstIndex(where: { $0.id == id }) else { return }
-        savedProviders[idx].name = editName.isEmpty ? "Model \(idx + 1)" : editName
+        let trimmedName = editName.trimmingCharacters(in: .whitespaces)
+        guard !hasNameCollision(trimmedName) else { return }
+        savedProviders[idx].name = trimmedName.isEmpty ? nextUniqueName() : trimmedName
         savedProviders[idx].provider = editProvider
         savedProviders[idx].model = editModel
         savedProviders[idx].apiKey = editApiKey
