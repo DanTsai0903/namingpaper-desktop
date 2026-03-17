@@ -35,8 +35,17 @@ class LibraryViewModel {
     var showAddPaperSheet: Bool = false
     var addPaperViewModel = AddPaperViewModel()
 
+    // Category management
+    var showNewCategoryField: Bool = false
+
     // Command palette
     var showCommandPalette: Bool = false
+
+    /// Display name for the library (last component of papersDir)
+    var libraryName: String {
+        let config = ConfigService.shared.readConfig()
+        return URL(fileURLWithPath: config.papersDir).lastPathComponent
+    }
 
     // Search
     var searchViewModel = SearchViewModel()
@@ -86,8 +95,32 @@ class LibraryViewModel {
         cliAvailable = available
     }
 
+    /// Force reload from DB regardless of change detection — use after add/remove.
+    @MainActor
+    func forceRefresh() async {
+        await db.forceReload()
+        let allPapers = await db.listPapers(limit: 10000, orderBy: sortOrder, ascending: sortAscending)
+        let oldIDs = Set(papers.map(\.id))
+        papers = allPapers
+        categories = await db.listCategories()
+        isEmpty = allPapers.isEmpty
+
+        let newIDs = Set(allPapers.map(\.id)).subtracting(oldIDs)
+        if !newIDs.isEmpty {
+            newlyAddedIDs = newIDs
+            Task {
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                await MainActor.run { newlyAddedIDs.removeAll() }
+            }
+        }
+    }
+
     @MainActor
     func refresh() async {
+        // Ensure DB is open (handles case where DB was created after app launch)
+        if !(await db.isOpen), await db.databaseExists {
+            try? await db.open()
+        }
         if await db.hasChanged() {
             let oldIDs = Set(papers.map(\.id))
             let allPapers = await db.listPapers(limit: 10000, orderBy: sortOrder, ascending: sortAscending)
@@ -287,13 +320,134 @@ class LibraryViewModel {
 
     // MARK: - Actions
 
-    func removePaper(id: String) {
+    func removePaper(id: String, deleteFile: Bool = true) {
         Task {
             do {
-                _ = try await CLIService.shared.removePaper(id: id)
-                await refresh()
+                _ = try await CLIService.shared.removePaper(id: id, deleteFile: deleteFile)
+                await forceRefresh()
             } catch {
                 // Handle error — could add an alert state
+            }
+        }
+    }
+
+    // MARK: - Category Management
+
+    private var papersDir: URL {
+        let config = ConfigService.shared.readConfig()
+        return URL(fileURLWithPath: config.papersDir)
+    }
+
+    /// Merge DB categories with filesystem subdirectories so empty folders also appear.
+    var allCategories: [Category] {
+        let dbNames = Set(categories.map(\.name))
+        var merged = categories
+        let fsDirs = scanSubdirectories(at: papersDir, relativeTo: papersDir)
+        for dir in fsDirs where !dbNames.contains(dir) {
+            merged.append(Category(name: dir, paperCount: 0))
+        }
+        return merged.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    /// Recursively scan for subdirectories relative to the papers root.
+    private func scanSubdirectories(at url: URL, relativeTo root: URL) -> [String] {
+        let fm = FileManager.default
+        guard let items = try? fm.contentsOfDirectory(at: url, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]) else {
+            return []
+        }
+        var result: [String] = []
+        for item in items {
+            guard (try? item.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true else { continue }
+            let relative = item.path.replacingOccurrences(of: root.path + "/", with: "")
+            result.append(relative)
+            result.append(contentsOf: scanSubdirectories(at: item, relativeTo: root))
+        }
+        return result
+    }
+
+    func createCategory(name: String) {
+        let dir = papersDir.appendingPathComponent(name)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        Task {
+            _ = try? await CLIService.shared.syncLibrary()
+            await forceRefresh()
+        }
+    }
+
+    /// Number of papers in a category (including subcategories).
+    func paperCount(for categoryName: String) -> Int {
+        papers.filter { $0.category == categoryName || $0.category.hasPrefix(categoryName + "/") }.count
+    }
+
+    func deleteCategory(name: String) {
+        let dir = papersDir.appendingPathComponent(name)
+
+        Task {
+            // Delete all papers in this category (and subcategories) via CLI
+            let papersInCategory = papers.filter {
+                $0.category == name || $0.category.hasPrefix(name + "/")
+            }
+
+            for paper in papersInCategory {
+                _ = try? await CLIService.shared.removePaper(id: paper.id, deleteFile: true)
+            }
+
+            // Remove the category directory (cleans up .DS_Store, empty subdirs, etc.)
+            try? FileManager.default.removeItem(at: dir)
+
+            if selectedCategory == name || (selectedCategory?.hasPrefix(name + "/") == true) {
+                await MainActor.run { selectedCategory = nil }
+            }
+
+            await forceRefresh()
+        }
+    }
+
+    func renameCategory(from oldName: String, to newName: String) {
+        guard !newName.isEmpty, oldName != newName else { return }
+        let oldDir = papersDir.appendingPathComponent(oldName)
+        let newDir = papersDir.appendingPathComponent(newName)
+        guard (try? FileManager.default.moveItem(at: oldDir, to: newDir)) != nil else { return }
+        if selectedCategory == oldName {
+            selectedCategory = newName
+        }
+        Task {
+            _ = try? await CLIService.shared.syncLibrary()
+            await forceRefresh()
+        }
+    }
+
+    func updateKeywords(paperID: String, keywords: [String]) {
+        Task {
+            let json = try? JSONSerialization.data(withJSONObject: keywords)
+            let str = json.flatMap { String(data: $0, encoding: .utf8) } ?? keywords.joined(separator: ", ")
+            _ = await db.updatePaperKeywords(id: paperID, keywords: str)
+            await forceRefresh()
+        }
+    }
+
+    func updateSummary(paperID: String, summary: String) {
+        Task {
+            _ = await db.updatePaperSummary(id: paperID, summary: summary)
+            await forceRefresh()
+        }
+    }
+
+    func movePaper(_ paper: Paper, toCategory category: String) {
+        Task {
+            let sourceURL = URL(fileURLWithPath: paper.filePath)
+            let filename = sourceURL.lastPathComponent
+            let destDir = papersDir.appendingPathComponent(category)
+            let destPath = destDir.appendingPathComponent(filename)
+
+            do {
+                try FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)
+                try FileManager.default.moveItem(at: sourceURL, to: destPath)
+                // Update the DB record directly with new path and category
+                _ = await db.updatePaper(id: paper.id, filePath: destPath.path, category: category)
+                await forceRefresh()
+            } catch {
+                await forceRefresh()
             }
         }
     }

@@ -30,10 +30,11 @@ actor DatabaseService {
         guard FileManager.default.fileExists(atPath: dbPath) else { return }
 
         var handle: OpaquePointer?
-        let flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX
+        // READWRITE is required for WAL-mode databases to properly read via -shm
+        let flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX
         let rc = sqlite3_open_v2(dbPath, &handle, flags, nil)
         guard rc == SQLITE_OK, let handle else {
-            let msg = db.flatMap { String(cString: sqlite3_errmsg($0)) } ?? "unknown error"
+            let msg = handle.flatMap { String(cString: sqlite3_errmsg($0)) } ?? "unknown error"
             throw DatabaseError.openFailed(msg)
         }
         db = handle
@@ -232,18 +233,117 @@ actor DatabaseService {
         return 0
     }
 
+    // MARK: - Update Paper
+
+    func updatePaper(id: String, filePath: String, category: String) -> Bool {
+        guard let db else { return false }
+
+        let sql = "UPDATE papers SET file_path = ?, category = ?, updated_at = ? WHERE id = ?"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return false }
+        defer { sqlite3_finalize(stmt) }
+
+        let now = ISO8601DateFormatter().string(from: Date())
+        sqlite3_bind_text(stmt, 1, (filePath as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 2, (category as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 3, (now as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 4, (id as NSString).utf8String, -1, nil)
+
+        return sqlite3_step(stmt) == SQLITE_DONE
+    }
+
+    // MARK: - Update Keywords
+
+    func updatePaperKeywords(id: String, keywords: String) -> Bool {
+        guard let db else { return false }
+
+        let sql = "UPDATE papers SET keywords = ?, updated_at = ? WHERE id = ?"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return false }
+        defer { sqlite3_finalize(stmt) }
+
+        let now = ISO8601DateFormatter().string(from: Date())
+        sqlite3_bind_text(stmt, 1, (keywords as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 2, (now as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 3, (id as NSString).utf8String, -1, nil)
+
+        return sqlite3_step(stmt) == SQLITE_DONE
+    }
+
+    // MARK: - Update Summary
+
+    func updatePaperSummary(id: String, summary: String) -> Bool {
+        guard let db else { return false }
+
+        let sql = "UPDATE papers SET summary = ?, updated_at = ? WHERE id = ?"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return false }
+        defer { sqlite3_finalize(stmt) }
+
+        let now = ISO8601DateFormatter().string(from: Date())
+        sqlite3_bind_text(stmt, 1, (summary as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 2, (now as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 3, (id as NSString).utf8String, -1, nil)
+
+        return sqlite3_step(stmt) == SQLITE_DONE
+    }
+
     // MARK: - Change Detection
 
     func hasChanged() -> Bool {
         guard let attrs = try? FileManager.default.attributesOfItem(atPath: dbPath),
               let modified = attrs[.modificationDate] as? Date else {
+            // DB file doesn't exist yet — if we haven't opened before, check again
+            if db == nil && databaseExists {
+                return true
+            }
             return false
         }
-        if let last = lastModified, modified > last {
+        if lastModified == nil {
             lastModified = modified
             return true
         }
+        if let last = lastModified, modified > last {
+            lastModified = modified
+            // Reopen connection so SQLite reads fresh data
+            reopenConnection()
+            return true
+        }
         return false
+    }
+
+    /// Force-reload: close and reopen connection, reset change tracking.
+    /// Use after a write operation (e.g. CLI add/remove) to guarantee fresh data.
+    func forceReload() {
+        if let db {
+            sqlite3_close(db)
+        }
+        db = nil
+
+        guard FileManager.default.fileExists(atPath: dbPath) else { return }
+
+        var handle: OpaquePointer?
+        let flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX
+        let rc = sqlite3_open_v2(dbPath, &handle, flags, nil)
+        if rc == SQLITE_OK, let handle {
+            db = handle
+        }
+        updateLastModified()
+    }
+
+    /// Close and reopen the database to pick up external changes
+    private func reopenConnection() {
+        if let db {
+            sqlite3_close(db)
+        }
+        db = nil
+
+        var handle: OpaquePointer?
+        let flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX
+        let rc = sqlite3_open_v2(dbPath, &handle, flags, nil)
+        if rc == SQLITE_OK, let handle {
+            db = handle
+        }
     }
 
     private func updateLastModified() {

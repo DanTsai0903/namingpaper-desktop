@@ -5,39 +5,103 @@ struct PaperListView: View {
     @Environment(TabManager.self) var tabManager
     @State private var sortOrder = [KeyPathComparator(\Paper.title)]
 
+    /// Direct child subcategories of the currently selected category.
+    private var childCategories: [CategoryNode] {
+        guard let selected = viewModel.selectedCategory else { return [] }
+        let tree = CategoryNode.buildTree(from: viewModel.allCategories)
+        return findNode(path: selected, in: tree)?.children ?? []
+    }
+
+    /// The display title for the current view.
+    private var panelTitle: String {
+        if viewModel.sidebarPanel == .search {
+            return "Search Results"
+        }
+        guard let cat = viewModel.selectedCategory else {
+            return viewModel.libraryName
+        }
+        // Show last segment of the category path
+        return cat.split(separator: "/").last.map(String.init) ?? cat
+    }
+
+    /// Papers directly in the selected category (not subcategories).
+    private var directPapers: [Paper] {
+        if viewModel.sidebarPanel == .search {
+            return viewModel.searchViewModel.searchResults
+        }
+        guard let cat = viewModel.selectedCategory else { return viewModel.papers }
+        return viewModel.papers.filter { $0.category == cat }
+    }
+
     var body: some View {
         @Bindable var viewModel = viewModel
-        Table(viewModel.filteredPapers, selection: $viewModel.selectedPaperID, sortOrder: $sortOrder) {
-            TableColumn("Title", value: \.title) { paper in
-                HStack(spacing: 4) {
-                    PaperRowView(
-                        paper: paper,
-                        isStarred: viewModel.isStarred(paper.id),
-                        highlightTerms: searchTerms
-                    ) {
-                        viewModel.toggleStar(paperID: paper.id)
+        VStack(spacing: 0) {
+            // Subcategory folders
+            if !childCategories.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(childCategories) { node in
+                            Button {
+                                viewModel.selectCategory(node.fullPath)
+                            } label: {
+                                VStack(spacing: 4) {
+                                    Image(systemName: "folder.fill")
+                                        .font(.title2)
+                                        .foregroundStyle(.secondary)
+                                    Text(node.segment)
+                                        .font(.caption)
+                                        .lineLimit(1)
+                                    Text("\(node.totalPaperCount)")
+                                        .font(.caption2)
+                                        .foregroundStyle(.tertiary)
+                                }
+                                .frame(width: 80)
+                                .padding(.vertical, 8)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
-                    .opacity(viewModel.newlyAddedIDs.contains(paper.id) ? 0.6 : 1.0)
-                    .animation(.easeIn(duration: 0.5), value: viewModel.newlyAddedIDs.contains(paper.id))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
                 }
+                .background(Color.secondary.opacity(0.04))
+                Divider()
             }
-            .width(min: 200)
 
-            TableColumn("Authors", value: \.authors) { paper in
-                if searchTerms.isEmpty {
-                    Text(paper.authors)
-                } else {
-                    Text(highlightedText(paper.authors, terms: searchTerms))
+            // Paper table
+            Table(directPapers, selection: $viewModel.selectedPaperID, sortOrder: $sortOrder) {
+                TableColumn("Title", value: \.title) { paper in
+                    HStack(spacing: 4) {
+                        PaperRowView(
+                            paper: paper,
+                            isStarred: viewModel.isStarred(paper.id),
+                            highlightTerms: searchTerms
+                        ) {
+                            viewModel.toggleStar(paperID: paper.id)
+                        }
+                        .opacity(viewModel.newlyAddedIDs.contains(paper.id) ? 0.6 : 1.0)
+                        .animation(.easeIn(duration: 0.5), value: viewModel.newlyAddedIDs.contains(paper.id))
+                    }
                 }
+                .width(min: 200)
+
+                TableColumn("Authors", value: \.authors) { paper in
+                    if searchTerms.isEmpty {
+                        Text(paper.authors)
+                    } else {
+                        Text(highlightedText(paper.authors, terms: searchTerms))
+                    }
+                }
+                .width(min: 100, ideal: 150)
+
+                TableColumn("Year", value: \.yearString)
+                    .width(50)
+
+                TableColumn("Journal", value: \.journal)
+                    .width(min: 80, ideal: 120)
             }
-            .width(min: 100, ideal: 150)
-
-            TableColumn("Year", value: \.yearString)
-                .width(50)
-
-            TableColumn("Journal", value: \.journal)
-                .width(min: 80, ideal: 120)
         }
+        .navigationTitle(panelTitle)
         .onChange(of: viewModel.selectedPaperID) { _, newID in
             if let id = newID, let paper = viewModel.paper(for: id) {
                 tabManager.openTab(for: paper)
@@ -55,6 +119,15 @@ struct PaperListView: View {
                 }
             }
         }
+    }
+
+    /// Find a node by its full path in the tree.
+    private func findNode(path: String, in nodes: [CategoryNode]) -> CategoryNode? {
+        for node in nodes {
+            if node.fullPath == path { return node }
+            if let found = findNode(path: path, in: node.children) { return found }
+        }
+        return nil
     }
 
     private var searchTerms: [String] {
@@ -93,7 +166,7 @@ struct EmptyLibraryView: View {
                 .font(.system(size: 48))
                 .foregroundStyle(.secondary)
 
-            Text("Welcome to NamingPaper")
+            Text("Welcome to \(viewModel.libraryName)")
                 .font(.title2)
                 .fontWeight(.semibold)
 

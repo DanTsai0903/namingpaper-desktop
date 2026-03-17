@@ -31,5 +31,6 @@ struct ContentView: View {
             }
         }
         .navigationSplitViewStyle(.automatic)
+        .navigationTitle(viewModel.libraryName)
     }
 }
