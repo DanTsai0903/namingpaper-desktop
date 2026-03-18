@@ -51,11 +51,14 @@ class SearchViewModel {
 
             searchResults = results
             isSearching = false
+        }
+    }
 
-            // Save to history
-            if !query.isEmpty {
-                addToHistory(query)
-            }
+    /// Save current search text to history. Call when a search result is actually used.
+    func commitToHistory() {
+        let query = searchText.trimmingCharacters(in: .whitespaces)
+        if !query.isEmpty {
+            addToHistory(query)
         }
     }
 
@@ -70,6 +73,16 @@ class SearchViewModel {
     }
 
     // MARK: - History
+
+    func removeFromHistory(_ query: String) {
+        searchHistory.removeAll { $0 == query }
+        saveHistory()
+    }
+
+    func clearHistory() {
+        searchHistory.removeAll()
+        saveHistory()
+    }
 
     private func addToHistory(_ query: String) {
         searchHistory.removeAll { $0 == query }

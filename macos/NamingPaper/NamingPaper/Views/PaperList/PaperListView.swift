@@ -106,6 +106,9 @@ struct PaperListView: View {
             if let id = newID, let paper = viewModel.paper(for: id) {
                 tabManager.openTab(for: paper)
                 viewModel.markRecent(paperID: id)
+                if viewModel.sidebarPanel == .search {
+                    viewModel.searchViewModel.commitToHistory()
+                }
             }
         }
         .onChange(of: sortOrder) { _, newOrder in

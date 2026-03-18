@@ -82,13 +82,37 @@ struct SearchSidebarView: View {
             FilterChipsView()
 
             // Search history (when field is focused and empty)
-            if isSearchFocused && viewModel.searchViewModel.searchText.isEmpty {
-                List(viewModel.searchViewModel.searchHistory, id: \.self) { query in
-                    Button(query) {
-                        viewModel.searchViewModel.searchText = query
-                        viewModel.searchViewModel.performSearch()
+            if isSearchFocused && viewModel.searchViewModel.searchText.isEmpty
+                && !viewModel.searchViewModel.searchHistory.isEmpty {
+                HStack {
+                    Text("Recent")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Clear All") {
+                        viewModel.searchViewModel.clearHistory()
                     }
+                    .font(.caption)
                     .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.top, 4)
+
+                List {
+                    ForEach(viewModel.searchViewModel.searchHistory, id: \.self) { query in
+                        Button(query) {
+                            viewModel.searchViewModel.searchText = query
+                            viewModel.searchViewModel.performSearch()
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .onDelete { offsets in
+                        for index in offsets {
+                            let query = viewModel.searchViewModel.searchHistory[index]
+                            viewModel.searchViewModel.removeFromHistory(query)
+                        }
+                    }
                 }
                 .listStyle(.plain)
             }
