@@ -10,7 +10,8 @@ class TestSettings:
         settings = Settings()
         assert settings.ai_provider == "ollama"
         assert settings.max_authors == 3
-        assert settings.max_filename_length == 200
+        assert settings.max_filename_length == 255
+        assert settings.template == "default"
         assert settings.max_text_chars == 8000
         assert settings.min_confidence == 0.5
         assert settings.ollama_base_url == "http://localhost:11434"
@@ -86,6 +87,45 @@ class TestSettings:
         monkeypatch.setattr("namingpaper.config.Path.home", lambda: tmp_path)
         settings = Settings.load()
         assert settings.ai_provider == "ollama"
+
+
+class TestTemplateSettings:
+    def test_default_template(self):
+        settings = Settings()
+        assert settings.template == "default"
+
+    def test_template_preset_from_config(self, tmp_path, monkeypatch):
+        config_dir = tmp_path / ".namingpaper"
+        config_dir.mkdir()
+        config_file = config_dir / "config.toml"
+        config_file.write_text('template = "compact"\n')
+        monkeypatch.setattr("namingpaper.config.Path.home", lambda: tmp_path)
+        settings = Settings.load()
+        assert settings.template == "compact"
+
+    def test_custom_template_from_config(self, tmp_path, monkeypatch):
+        config_dir = tmp_path / ".namingpaper"
+        config_dir.mkdir()
+        config_file = config_dir / "config.toml"
+        config_file.write_text('template = "{year} - {authors} - {title}"\n')
+        monkeypatch.setattr("namingpaper.config.Path.home", lambda: tmp_path)
+        settings = Settings.load()
+        assert settings.template == "{year} - {authors} - {title}"
+
+    def test_template_from_env(self, monkeypatch):
+        monkeypatch.setenv("NAMINGPAPER_TEMPLATE", "simple")
+        settings = Settings()
+        assert settings.template == "simple"
+
+    def test_invalid_template_does_not_block_load(self, tmp_path, monkeypatch):
+        config_dir = tmp_path / ".namingpaper"
+        config_dir.mkdir()
+        config_file = config_dir / "config.toml"
+        config_file.write_text('template = "{authors} - {invalid_field}"\n')
+        monkeypatch.setattr("namingpaper.config.Path.home", lambda: tmp_path)
+        # Should load without error — validation happens at usage time
+        settings = Settings.load()
+        assert settings.template == "{authors} - {invalid_field}"
 
 
 class TestGetSettings:

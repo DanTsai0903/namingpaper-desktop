@@ -1,81 +1,100 @@
-# Capability: add-papers
-
-## Purpose
-
-Handles adding PDF papers to the library via drag-and-drop, file picker, and dock icon drop, with progress tracking and CLI subprocess integration.
-
-## Requirements
-
-### Requirement: Drag-and-drop with overlay
-
-The main window SHALL accept PDF files via drag-and-drop using `.onDrop(of: [.pdf])`. When files are dragged over the window, a semi-transparent overlay SHALL appear with a drop zone indicator ("Drop PDFs to add to library"). Dropping SHALL trigger the add workflow.
-
-#### Scenario: Drag PDF over window
-
-- **WHEN** user drags a PDF file over the app window
-- **THEN** a drop zone overlay appears indicating the file can be dropped
-
-#### Scenario: Drop PDF files
-
-- **WHEN** user drops one or more PDF files onto the window
-- **THEN** the add workflow begins for each file
-
-#### Scenario: Drag non-PDF file
-
-- **WHEN** user drags a non-PDF file over the window
-- **THEN** the drop zone overlay does not appear and the drop is rejected
-
-### Requirement: File picker via Cmd+O
-
-The app SHALL provide a file picker via `Cmd+O` (File > Add Papers) using `.fileImporter`. The picker SHALL allow multiple PDF selection. Selected files SHALL trigger the same add workflow as drag-and-drop.
-
-#### Scenario: Add papers via file picker
-
-- **WHEN** user presses `Cmd+O` and selects two PDF files
-- **THEN** the add workflow begins for both files
-
-### Requirement: Dock icon drop
-
-The app SHALL accept PDF files dropped onto its dock icon via `NSApplicationDelegate.application(_:open:)`. Dropped files SHALL trigger the add workflow.
-
-#### Scenario: Drop PDF on dock icon
-
-- **WHEN** user drags a PDF file onto the app's dock icon
-- **THEN** the add workflow begins for that file
+## MODIFIED Requirements
 
 ### Requirement: Progress sheet with per-file status
 
-When the add workflow begins, a modal sheet SHALL appear showing progress. Each file SHALL have a row with: filename, current stage (extracting, summarizing, categorizing, done), and a progress indicator. The sheet SHALL have a "Close" button that becomes active when all files are complete.
+When the add workflow begins, a modal sheet SHALL appear showing a multi-step flow: configure → processing → review. The configure step SHALL be shown first, allowing the user to set options before processing starts. The processing step SHALL show per-file progress (extracting, summarizing, categorizing, done). The review step SHALL show results for editing before committing. The sheet SHALL have a "Close" button in the review step that becomes active when all files are committed or the user cancels.
+
+#### Scenario: Show configuration step first
+
+- **WHEN** user drops 3 PDFs onto the window
+- **THEN** a sheet appears in the configure phase, showing the 3 selected files and configuration options (provider, template, reasoning, category priority)
+
+#### Scenario: Transition to processing
+
+- **WHEN** user clicks "Start Processing" in the configure step
+- **THEN** the sheet transitions to the processing phase, showing per-file progress indicators
 
 #### Scenario: Show progress for multiple files
 
-- **WHEN** user drops 3 PDFs onto the window
-- **THEN** a progress sheet appears with 3 rows, each showing the current processing stage
+- **WHEN** processing is underway for 3 files
+- **THEN** the processing view shows 3 rows, each with the current stage (extracting → summarizing → categorizing → done)
 
-#### Scenario: File processing completes
+#### Scenario: Transition to review
 
-- **WHEN** a file finishes all stages (extracting → summarizing → categorizing → done)
-- **THEN** its row shows a checkmark and "Done" status
+- **WHEN** all files finish processing (success or failure)
+- **THEN** the sheet transitions to the review phase, showing editable results
 
 #### Scenario: File processing fails
 
 - **WHEN** a file fails during processing (e.g., CLI error)
-- **THEN** its row shows an error icon and the error message
+- **THEN** its row shows an error icon and the error message, and it appears as non-editable in the review step
 
 ### Requirement: CLI subprocess integration for add
 
-Each file in the add workflow SHALL be processed by running `namingpaper add --execute --yes <path>` via `CLIService`. The subprocess stdout SHALL be parsed for stage progress. Multiple files SHALL be processed sequentially (one at a time).
+Each file in the add workflow SHALL be processed in two passes via `CLIService`. The first pass SHALL run `namingpaper add <path> --copy --provider <p> --template <t>` (dry-run, no `--execute`) to obtain AI suggestions. The second pass (after user review) SHALL run `namingpaper add <path> --execute --yes --copy --provider <p> --template <t> --category <c> --filename <f>` to commit to the library. Multiple files SHALL be processed sequentially.
 
-#### Scenario: CLI add command execution
+#### Scenario: Dry-run pass for preview
 
-- **WHEN** a file enters the add workflow
-- **THEN** `CLIService` runs `namingpaper add --execute --yes <path>` and reports output
+- **WHEN** a file enters the processing phase
+- **THEN** `CLIService` runs `namingpaper add <path> --copy --provider <p> --template <t>` without `--execute` and parses the suggested name and category from stdout
+
+#### Scenario: Execute pass after review
+
+- **WHEN** user confirms a file in the review step
+- **THEN** `CLIService` runs `namingpaper add <path> --execute --yes --copy --category <edited-category> --filename <edited-name>` to add the paper to the library
+
+#### Scenario: Template and reasoning flags passed through
+
+- **WHEN** user selected template "compact" and enabled reasoning in the configure step
+- **THEN** both CLI passes include `--template compact` and `--reasoning` flags
+
+### Requirement: CLI adds --no-rename flag
+
+The CLI `add` command SHALL accept a `--no-rename` flag. When provided, the file SHALL keep its original filename and only be categorized (moved/copied into the category directory without renaming). Metadata extraction, summarization, and categorization SHALL still run normally.
+
+#### Scenario: No-rename mode
+
+- **WHEN** `namingpaper add paper.pdf --execute --yes --no-rename`
+- **THEN** the paper is added to the library under the categorized directory but keeps the filename "paper.pdf"
+
+#### Scenario: Normal mode without flag
+
+- **WHEN** `namingpaper add paper.pdf --execute --yes` (no `--no-rename`)
+- **THEN** the paper is renamed using the AI-generated filename (current behavior)
+
+### Requirement: CLI adds --filename flag
+
+The CLI `add` command SHALL accept an optional `--filename` / `-f` flag that overrides the AI-generated filename. When provided, the paper SHALL be stored with the given filename instead of the one generated by the template system. The filename SHALL have `.pdf` appended if not already present.
+
+#### Scenario: Filename override
+
+- **WHEN** `namingpaper add paper.pdf --execute --yes --filename "Custom Name.pdf"`
+- **THEN** the paper is stored as "Custom Name.pdf" instead of the AI-generated name
+
+#### Scenario: No filename override
+
+- **WHEN** `namingpaper add paper.pdf --execute --yes` (no `--filename`)
+- **THEN** the paper is stored with the AI-generated filename (current behavior)
+
+### Requirement: CLI adds --reasoning flag
+
+The CLI `add` and `rename` commands SHALL accept `--reasoning` / `--no-reasoning` flags. When `--reasoning` is passed, providers that support thinking mode (e.g., oMLX with Qwen3) SHALL enable it. The default SHALL be `--no-reasoning` (current behavior preserved).
+
+#### Scenario: Reasoning enabled for oMLX Qwen3
+
+- **WHEN** `namingpaper add paper.pdf --provider omlx --reasoning`
+- **THEN** the oMLX provider does NOT set `enable_thinking: False` for Qwen3 models, allowing native thinking mode
+
+#### Scenario: Reasoning disabled by default
+
+- **WHEN** `namingpaper add paper.pdf --provider omlx` (no reasoning flag)
+- **THEN** the oMLX provider sets `enable_thinking: False` for Qwen3 models (current behavior)
 
 ### Requirement: Library refresh on completion
 
-After all files in an add workflow are processed, the app SHALL refresh the paper list from the database. Newly added papers SHALL appear in the list with a brief highlight animation (fade-in or flash).
+After all files in an add workflow are committed via the review step, the app SHALL refresh the paper list from the database. Newly added papers SHALL appear in the list.
 
-#### Scenario: New paper appears after add
+#### Scenario: New paper appears after commit
 
-- **WHEN** a paper is successfully added via the CLI
-- **THEN** the paper list refreshes and the new paper appears with a highlight animation
+- **WHEN** user confirms papers in the review step and commit succeeds
+- **THEN** the paper list refreshes and the new papers appear

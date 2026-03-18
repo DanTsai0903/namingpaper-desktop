@@ -41,6 +41,7 @@
 		A10020000000000000000020 /* PDFKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A20020000000000000000020 /* PDFKit.framework */; };
 		A10021000000000000000021 /* Quartz.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A20021000000000000000021 /* Quartz.framework */; };
 		A10024000000000000000024 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20024000000000000000024 /* KeychainService.swift */; };
+		A10025000000000000000025 /* TemplatePrefsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20025000000000000000025 /* TemplatePrefsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -80,6 +81,7 @@
 		A20022000000000000000022 /* NamingPaper.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NamingPaper.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20023000000000000000023 /* NamingPaper.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NamingPaper.entitlements; sourceTree = "<group>"; };
 		A20024000000000000000024 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
+		A20025000000000000000025 /* TemplatePrefsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplatePrefsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -262,6 +264,7 @@
 				A20016000000000000000016 /* PreferencesView.swift */,
 				A20017000000000000000017 /* GeneralPrefsView.swift */,
 				A20018000000000000000018 /* AIProviderPrefsView.swift */,
+				A20025000000000000000025 /* TemplatePrefsView.swift */,
 			);
 			path = Preferences;
 			sourceTree = "<group>";
@@ -365,6 +368,7 @@
 				A1001B0000000000000001B /* ConfigService.swift in Sources */,
 				A1001C0000000000000001C /* KeyboardShortcuts.swift in Sources */,
 				A10024000000000000000024 /* KeychainService.swift in Sources */,
+				A10025000000000000000025 /* TemplatePrefsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -506,6 +510,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = NamingPaper/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 namingpaper. All rights reserved.";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -535,6 +540,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = NamingPaper/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 namingpaper. All rights reserved.";
 				LD_RUNPATH_SEARCH_PATHS = (

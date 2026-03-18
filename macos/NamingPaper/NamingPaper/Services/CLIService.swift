@@ -102,7 +102,7 @@ struct AddPaperOptions {
     var selectedSavedProviderID: UUID?
     var provider: String = ""
     var model: String = ""
-    var template: String = "default"
+    var template: String = ConfigService.shared.readConfig().template
     var categoryPriority: Bool = false
     var reasoning: Bool = false
     var renameFile: Bool = true

@@ -152,14 +152,18 @@ def rename(
         console.print(f"[red]Error:[/red] File must be a PDF: {pdf_path}")
         raise typer.Exit(1)
 
-    # Validate template if provided
-    if template:
-        from namingpaper.template import validate_template, get_template
-        template_str = get_template(template)
-        is_valid, error = validate_template(template_str)
-        if not is_valid:
-            console.print(f"[red]Invalid template:[/red] {error}")
-            raise typer.Exit(1)
+    # Resolve template: CLI flag > config/env > default
+    settings = get_settings()
+    if template is None:
+        template = settings.template
+
+    # Validate template
+    from namingpaper.template import validate_template, get_template
+    template_str = get_template(template)
+    is_valid, error = validate_template(template_str)
+    if not is_valid:
+        console.print(f"[red]Invalid template:[/red] {error}")
+        raise typer.Exit(1)
 
     # Extract metadata and plan rename
     with console.status("[bold blue]Extracting metadata..."):
@@ -177,11 +181,10 @@ def rename(
             console.print(f"[red]Error extracting metadata:[/red] {e}")
             raise typer.Exit(1)
 
-    # Apply template if provided
-    if template:
-        from namingpaper.template import build_filename_from_template
-        filename = build_filename_from_template(operation.metadata, template)
-        operation.destination = pdf_path.parent / filename
+    # Apply template
+    from namingpaper.template import build_filename_from_template
+    filename = build_filename_from_template(operation.metadata, template)
+    operation.destination = pdf_path.parent / filename
 
     # If output_dir specified, update destination to that directory
     copy_mode = output_dir is not None
@@ -376,13 +379,17 @@ def batch(
     from namingpaper.template import validate_template, get_template
     import json
 
-    # Validate template if provided
-    if template:
-        template_str = get_template(template)
-        is_valid, error = validate_template(template_str)
-        if not is_valid:
-            console.print(f"[red]Invalid template:[/red] {error}")
-            raise typer.Exit(1)
+    # Resolve template: CLI flag > config/env > default
+    settings = get_settings()
+    if template is None:
+        template = settings.template
+
+    # Validate template
+    template_str = get_template(template)
+    is_valid, error = validate_template(template_str)
+    if not is_valid:
+        console.print(f"[red]Invalid template:[/red] {error}")
+        raise typer.Exit(1)
 
     # Scan directory
     console.print(f"[blue]Scanning[/blue] {directory}...")
@@ -607,6 +614,7 @@ def config(
             "Ollama OCR Model",
             settings.ollama_ocr_model or "[dim]default (deepseek-ocr)[/dim]",
         )
+        table.add_row("Template", settings.template)
         table.add_row("Max Authors", str(settings.max_authors))
         table.add_row("Max Filename Length", str(settings.max_filename_length))
 
@@ -636,12 +644,19 @@ def templates() -> None:
         "simple": "Smith, Wang - 2023 - Asset pricing....pdf",
     }
 
+    settings = get_settings()
+    current = settings.template
+
     for name, pattern in list_presets().items():
-        table.add_row(name, pattern, examples.get(name, ""))
+        display_name = f"[bold]{name} ✓[/bold]" if name == current else name
+        table.add_row(display_name, pattern, examples.get(name, ""))
 
     console.print(table)
     console.print()
+    if current not in list_presets():
+        console.print(f"[dim]Current template (custom):[/dim] {current}")
     console.print("[dim]Use with: namingpaper batch --template <name|pattern>[/dim]")
+    console.print("[dim]Set default: add 'template = \"<name>\"' to ~/.namingpaper/config.toml[/dim]")
 
 
 @app.command()
@@ -1040,6 +1055,11 @@ def add(
     import json
     from namingpaper.database import Database
     from namingpaper.library import add_paper as _add_paper, import_directory
+
+    # Resolve template: CLI flag > config/env > default
+    settings = get_settings()
+    if template is None:
+        template = settings.template
 
     # Parse pre-extracted metadata JSON
     pre_extracted = None

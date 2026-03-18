@@ -172,6 +172,12 @@ struct CategoryTreeView: View {
                 .buttonStyle(.plain)
                 .fontWeight(viewModel.selectedCategory == node.fullPath ? .semibold : .regular)
                 .contextMenu { categoryContextMenu(node) }
+                .dropDestination(for: Paper.self) { papers, _ in
+                    for paper in papers where paper.category != node.fullPath {
+                        viewModel.movePaper(paper, toCategory: node.fullPath)
+                    }
+                    return !papers.isEmpty
+                }
             }
         }
     }
@@ -196,6 +202,12 @@ struct CategoryTreeView: View {
                 .buttonStyle(.plain)
                 .fontWeight(viewModel.selectedCategory == node.fullPath ? .semibold : .regular)
                 .contextMenu { categoryContextMenu(node) }
+                .dropDestination(for: Paper.self) { papers, _ in
+                    for paper in papers where paper.category != node.fullPath {
+                        viewModel.movePaper(paper, toCategory: node.fullPath)
+                    }
+                    return !papers.isEmpty
+                }
             }
         }
     }

@@ -39,7 +39,11 @@ struct NamingPaperApp: App {
                     }
                 }
                 .sheet(isPresented: Bindable(libraryViewModel).showAddPaperSheet, onDismiss: {
-                    libraryViewModel.addPaperViewModel.reset()
+                    // Defer reset so SwiftUI finishes tearing down ForEach bindings
+                    // before items are cleared, preventing "Index out of range" crashes.
+                    DispatchQueue.main.async {
+                        libraryViewModel.addPaperViewModel.reset()
+                    }
                 }) {
                     AddPaperSheet()
                         .environment(libraryViewModel)

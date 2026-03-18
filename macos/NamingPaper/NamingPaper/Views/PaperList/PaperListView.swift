@@ -59,6 +59,12 @@ struct PaperListView: View {
                                 .padding(.vertical, 8)
                             }
                             .buttonStyle(.plain)
+                            .dropDestination(for: Paper.self) { papers, _ in
+                                for paper in papers where paper.category != node.fullPath {
+                                    viewModel.movePaper(paper, toCategory: node.fullPath)
+                                }
+                                return !papers.isEmpty
+                            }
                         }
                     }
                     .padding(.horizontal, 12)
@@ -82,6 +88,7 @@ struct PaperListView: View {
                         .opacity(viewModel.newlyAddedIDs.contains(paper.id) ? 0.6 : 1.0)
                         .animation(.easeIn(duration: 0.5), value: viewModel.newlyAddedIDs.contains(paper.id))
                     }
+                    .draggable(paper)
                 }
                 .width(min: 200)
 

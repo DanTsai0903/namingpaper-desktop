@@ -79,6 +79,10 @@ class Settings(BaseSettings):
     )
 
     # Filename formatting
+    template: str = Field(
+        default="default",
+        description="Filename template preset (default, compact, full, simple) or custom pattern",
+    )
     max_authors: int = Field(
         default=3, ge=1, description="Max authors before using 'et al'"
     )

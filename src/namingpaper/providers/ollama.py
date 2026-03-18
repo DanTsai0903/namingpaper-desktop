@@ -31,8 +31,8 @@ class OllamaProvider(AIProvider):
         keep_alive: str = "0s",
     ):
         # For backwards compatibility, model param sets text_model
-        self.ocr_model = ocr_model or self.DEFAULT_OCR_MODEL
-        self.text_model = text_model or model or self.DEFAULT_TEXT_MODEL
+        self.ocr_model = (ocr_model or self.DEFAULT_OCR_MODEL).strip()
+        self.text_model = (text_model or model or self.DEFAULT_TEXT_MODEL).strip()
         self.base_url = (base_url or self.DEFAULT_BASE_URL).rstrip("/")
         self.keep_alive = keep_alive
         self._client: httpx.AsyncClient | None = None

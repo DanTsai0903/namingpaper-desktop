@@ -55,7 +55,7 @@ struct PaperDetailView: View {
                 Button {
                     showCategoryPicker.toggle()
                 } label: {
-                    Label("Recategorize", systemImage: "tag")
+                    Label("Recategorize", systemImage: "arrow.up.doc.on.clipboard")
                 }
                 .popover(isPresented: $showCategoryPicker) {
                     categoryPickerPopover

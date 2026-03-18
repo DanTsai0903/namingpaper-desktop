@@ -6,6 +6,7 @@ struct AppConfig {
     var model: String
     var apiKey: String
     var cliPath: String
+    var template: String
 
     /// The TOML key name for the API key based on provider
     var apiKeyTOMLName: String {
@@ -23,7 +24,8 @@ struct AppConfig {
         provider: "ollama",
         model: "",
         apiKey: "",
-        cliPath: ""
+        cliPath: "",
+        template: "default"
     )
 }
 
@@ -101,6 +103,7 @@ class ConfigService {
             case "papers_dir": config.papersDir = value
             case "provider": config.provider = value
             case "model": config.model = value
+            case "template": config.template = value
             case _ where apiKeyNames.contains(fullKey):
                 config.apiKey = value
             default: break
@@ -123,6 +126,9 @@ class ConfigService {
         }
         if !config.apiKey.isEmpty {
             lines.append("\(config.apiKeyTOMLName) = \"\(config.apiKey)\"")
+        }
+        if !config.template.isEmpty, config.template != "default" {
+            lines.append("template = \"\(config.template)\"")
         }
         lines.append("")
         return lines
@@ -147,6 +153,9 @@ class ConfigService {
             case "model":
                 lines[i] = "model = \"\(config.model)\""
                 found.insert("model")
+            case "template":
+                lines[i] = "template = \"\(config.template)\""
+                found.insert("template")
             case _ where apiKeyNames.contains(key):
                 // Replace existing API key line with the correct provider-specific key
                 if !config.apiKey.isEmpty {
@@ -171,6 +180,9 @@ class ConfigService {
         }
         if !found.contains("api_key"), !config.apiKey.isEmpty {
             lines.append("\(config.apiKeyTOMLName) = \"\(config.apiKey)\"")
+        }
+        if !found.contains("template"), !config.template.isEmpty, config.template != "default" {
+            lines.append("template = \"\(config.template)\"")
         }
 
         return lines

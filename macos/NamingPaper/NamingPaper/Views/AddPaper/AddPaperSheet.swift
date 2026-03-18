@@ -5,7 +5,9 @@ struct AddPaperSheet: View {
     @Environment(\.dismiss) var dismiss
 
     @State private var savedProviders: [SavedProvider] = []
-    private let templates = ["default", "compact", "full", "simple"]
+    @State private var templates: [SavedTemplate] = []
+
+    private var builtInTemplateNames: [String] { ["default", "compact", "full", "simple"] }
 
     private func providerDisplayName(_ id: String) -> String {
         switch id {
@@ -48,6 +50,14 @@ struct AddPaperSheet: View {
             if let data = UserDefaults.standard.data(forKey: "savedProviders"),
                let decoded = try? JSONDecoder().decode([SavedProvider].self, from: data) {
                 savedProviders = decoded
+            }
+            if let data = UserDefaults.standard.data(forKey: "savedTemplates"),
+               let decoded = try? JSONDecoder().decode([SavedTemplate].self, from: data) {
+                templates = decoded
+            } else {
+                templates = builtInTemplateNames.map {
+                    SavedTemplate(name: $0, pattern: "", isBuiltIn: true)
+                }
             }
         }
     }
@@ -102,8 +112,9 @@ struct AddPaperSheet: View {
                 }
 
                 Picker("Name Format", selection: $addVM.options.template) {
-                    ForEach(templates, id: \.self) { t in
-                        Text(t).tag(t)
+                    ForEach(templates) { t in
+                        let label: String = t.name
+                        Text(label).tag(t.isBuiltIn ? t.name : t.pattern)
                     }
                 }
 

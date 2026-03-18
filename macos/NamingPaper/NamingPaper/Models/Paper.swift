@@ -1,6 +1,15 @@
 import Foundation
+import UniformTypeIdentifiers
+import CoreTransferable
 
-struct Paper: Identifiable, Hashable {
+extension UTType {
+    static let namingpaperPaper = UTType(exportedAs: "com.namingpaper.paper")
+}
+
+struct Paper: Identifiable, Hashable, Codable, Transferable {
+    static var transferRepresentation: some TransferRepresentation {
+        CodableRepresentation(contentType: .namingpaperPaper)
+    }
     let id: String
     let sha256: String
     let title: String
