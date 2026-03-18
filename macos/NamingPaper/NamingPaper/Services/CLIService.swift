@@ -30,6 +30,7 @@ struct AddPaperResult {
     var authors: String
     var year: String
     var journal: String
+    var confidence: Double?
     /// Cached JSON metadata from dry-run to pass on commit (avoids re-extraction)
     var cachedMetadataJSON: String?
 
@@ -42,6 +43,7 @@ struct AddPaperResult {
         self.authors = dryRun.authors
         self.year = dryRun.year
         self.journal = dryRun.journal
+        self.confidence = nil
     }
 
     init(from paper: CLIService.AddPaperJSONPaper) {
@@ -53,6 +55,7 @@ struct AddPaperResult {
         self.authors = paper.authors.joined(separator: ", ")
         self.year = String(paper.year)
         self.journal = paper.journal
+        self.confidence = paper.confidence
 
         // Build the cached metadata JSON using Codable for type safety
         let cached = PreExtractedMetadata(

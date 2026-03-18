@@ -79,7 +79,7 @@ def build_filename_from_template(
         {journal} - Journal abbreviation (or full name if no abbrev)
         {journal_abbrev} - Journal abbreviation only (empty if none)
         {journal_full} - Full journal name
-        {title} - Truncated title
+        {title} - Paper title
 
     Args:
         metadata: Paper metadata

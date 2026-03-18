@@ -202,8 +202,10 @@ class AddPaperViewModel {
     }
 
     func reset() {
-        items = []
+        // Clear phase first so the review ForEach stops rendering before items are emptied,
+        // preventing "Index out of range" crashes from stale bindings.
         phase = .configure
+        items = []
         isProcessing = false
         isComplete = false
         isCommitting = false

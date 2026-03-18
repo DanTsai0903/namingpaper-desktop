@@ -83,7 +83,7 @@ class Settings(BaseSettings):
         default=3, ge=1, description="Max authors before using 'et al'"
     )
     max_filename_length: int = Field(
-        default=200, ge=20, le=255, description="Maximum filename length"
+        default=255, ge=20, le=255, description="Maximum filename length"
     )
 
     # Library settings

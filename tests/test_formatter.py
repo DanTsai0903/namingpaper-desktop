@@ -61,19 +61,15 @@ class TestFormatTitle:
     def test_short_title_unchanged(self):
         assert format_title("Short title") == "Short title"
 
-    def test_long_title_truncated(self):
+    def test_long_title_preserved(self):
         result = format_title("One two three four five six seven eight nine ten")
-        assert result == "One two three four five six..."
-
-    def test_custom_max_words(self):
-        result = format_title("One two three four five", max_words=3)
-        assert result == "One two three..."
+        assert result == "One two three four five six seven eight nine ten"
 
 
 class TestBuildFilename:
     def test_standard_format(self, sample_metadata: PaperMetadata):
         filename = build_filename(sample_metadata)
-        assert filename == "Fama and French, (1993, JFE), Common risk factors in the returns....pdf"
+        assert filename == "Fama and French, (1993, JFE), Common risk factors in the returns on stocks and bonds.pdf"
 
     def test_many_authors_uses_et_al(self, sample_metadata_many_authors: PaperMetadata):
         filename = build_filename(sample_metadata_many_authors)

@@ -10,6 +10,7 @@ struct CategoryTreeView: View {
     @State private var categoryToDelete: String?
     @State private var expandedCategories: Set<String> = []
     @State private var hasAutoExpanded = false
+    @State private var starredExpanded = true
 
     private var categoryTree: [CategoryNode] {
         CategoryNode.buildTree(from: viewModel.allCategories)
@@ -20,12 +21,14 @@ struct CategoryTreeView: View {
         List(selection: $viewModel.selectedCategory) {
             // Starred section
             if !viewModel.starredPapers.isEmpty {
-                Section("Starred") {
+                Section(isExpanded: $starredExpanded) {
                     ForEach(viewModel.starredPapers) { paper in
                         Label(paper.title, systemImage: "star.fill")
                             .font(.caption)
                             .lineLimit(1)
                     }
+                } header: {
+                    Text("Starred")
                 }
             }
 
@@ -45,9 +48,16 @@ struct CategoryTreeView: View {
                             .background(Color.secondary.opacity(0.15))
                             .clipShape(Capsule())
                     }
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .fontWeight(viewModel.selectedCategory == nil ? .semibold : .regular)
+                .listRowBackground(
+                    viewModel.selectedCategory == nil
+                        ? RoundedRectangle(cornerRadius: 5).fill(Color.accentColor)
+                        : nil
+                )
+                .foregroundStyle(viewModel.selectedCategory == nil ? .white : .primary)
             }
 
             // Categories
@@ -157,6 +167,7 @@ struct CategoryTreeView: View {
                         Spacer()
                         countBadge(node.paperCount)
                     }
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .fontWeight(viewModel.selectedCategory == node.fullPath ? .semibold : .regular)
@@ -180,6 +191,7 @@ struct CategoryTreeView: View {
                         Spacer()
                         countBadge(node.totalPaperCount)
                     }
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .fontWeight(viewModel.selectedCategory == node.fullPath ? .semibold : .regular)

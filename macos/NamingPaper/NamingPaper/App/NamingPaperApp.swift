@@ -38,7 +38,9 @@ struct NamingPaperApp: App {
                             .environment(tabManager)
                     }
                 }
-                .sheet(isPresented: Bindable(libraryViewModel).showAddPaperSheet) {
+                .sheet(isPresented: Bindable(libraryViewModel).showAddPaperSheet, onDismiss: {
+                    libraryViewModel.addPaperViewModel.reset()
+                }) {
                     AddPaperSheet()
                         .environment(libraryViewModel)
                 }

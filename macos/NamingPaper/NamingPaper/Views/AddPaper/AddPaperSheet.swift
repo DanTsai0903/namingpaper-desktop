@@ -119,7 +119,6 @@ struct AddPaperSheet: View {
             HStack {
                 Button("Cancel") {
                     dismiss()
-                    addVM.reset()
                 }
                 .keyboardShortcut(.cancelAction)
 
@@ -203,13 +202,11 @@ struct AddPaperSheet: View {
                     Spacer()
                     Button("Close") {
                         dismiss()
-                        addVM.reset()
                     }
                     .keyboardShortcut(.defaultAction)
                 } else {
                     Button("Cancel") {
                         dismiss()
-                        addVM.reset()
                     }
                     .keyboardShortcut(.cancelAction)
 
@@ -245,15 +242,21 @@ struct AddPaperSheet: View {
 
         VStack(alignment: .leading, spacing: 6) {
             if let result = currentItem.result {
-                // Metadata summary line
-                let meta = [result.title, result.authors, result.year, result.journal]
-                    .filter { !$0.isEmpty }
-                    .joined(separator: " \u{2022} ")
-                if !meta.isEmpty {
-                    Text(meta)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                // Metadata summary line with confidence
+                HStack(spacing: 6) {
+                    let meta = [result.title, result.authors, result.year, result.journal]
+                        .filter { !$0.isEmpty }
+                        .joined(separator: " \u{2022} ")
+                    if !meta.isEmpty {
+                        Text(meta)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    Spacer()
+                    if let confidence = result.confidence {
+                        confidenceBadge(confidence)
+                    }
                 }
 
                 // Editable name
@@ -389,5 +392,18 @@ struct AddPaperSheet: View {
                 .foregroundStyle(.red)
                 .frame(width: 20, height: 20)
         }
+    }
+
+    @ViewBuilder
+    private func confidenceBadge(_ confidence: Double) -> some View {
+        let pct = Int(confidence * 100)
+        let color: Color = confidence >= 0.8 ? .green : confidence >= 0.5 ? .orange : .red
+        Text("\(pct)%")
+            .font(.caption2)
+            .fontWeight(.medium)
+            .foregroundStyle(color)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(color.opacity(0.12), in: Capsule())
     }
 }
