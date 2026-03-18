@@ -8,12 +8,11 @@ struct PaperRowView: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Button(action: onToggleStar) {
-                Image(systemName: isStarred ? "star.fill" : "star")
-                    .foregroundStyle(isStarred ? .yellow : .secondary)
-                    .font(.caption)
-            }
-            .buttonStyle(.plain)
+            Image(systemName: isStarred ? "star.fill" : "star")
+                .foregroundStyle(isStarred ? .yellow : .secondary)
+                .font(.caption)
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onToggleStar)
 
             if highlightTerms.isEmpty {
                 Text(paper.title)

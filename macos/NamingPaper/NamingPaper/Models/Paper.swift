@@ -58,6 +58,18 @@ struct Paper: Identifiable, Hashable, Codable, Transferable {
         return array
     }
 
+    /// NSItemProvider for `.onDrag` — avoids the gesture conflict that `.draggable()` causes with Table row selection.
+    var dragItemProvider: NSItemProvider {
+        let provider = NSItemProvider()
+        if let data = try? JSONEncoder().encode(self) {
+            provider.registerDataRepresentation(forTypeIdentifier: UTType.namingpaperPaper.identifier, visibility: .all) { completion in
+                completion(data, nil)
+                return nil
+            }
+        }
+        return provider
+    }
+
     var pdfURL: URL? {
         let path = filePath
         guard !path.isEmpty else { return nil }

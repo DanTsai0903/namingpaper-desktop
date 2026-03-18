@@ -88,7 +88,11 @@ struct PaperListView: View {
                         .opacity(viewModel.newlyAddedIDs.contains(paper.id) ? 0.6 : 1.0)
                         .animation(.easeIn(duration: 0.5), value: viewModel.newlyAddedIDs.contains(paper.id))
                     }
-                    .draggable(paper)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        viewModel.selectedPaperID = paper.id
+                    }
+                    .onDrag { paper.dragItemProvider }
                 }
                 .width(min: 200)
 
