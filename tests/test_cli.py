@@ -106,8 +106,9 @@ class TestConfigCommand:
                 gemini_api_key=None,
                 ollama_base_url="http://localhost:11434",
                 ollama_ocr_model=None,
+                template="default",
                 max_authors=3,
-                max_filename_length=200,
+                max_filename_length=255,
             )
             result = runner.invoke(app, ["config", "--show"])
 
