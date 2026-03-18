@@ -29,7 +29,15 @@ uv tool install "namingpaper[gemini] @ git+https://github.com/DanTsai0903/naming
 
 ### macOS App
 
-Open `macos/NamingPaper/NamingPaper.xcodeproj` in Xcode and build.
+Download `NamingPaper.dmg` from the [latest GitHub release](https://github.com/DanTsai0903/namingpaper-desktop/releases/latest), open it, and drag **NamingPaper.app** to your Applications folder.
+
+On first launch, macOS will block the app because it is not notarized. To open it:
+
+1. Right-click (or Control-click) **NamingPaper.app** in Applications
+2. Select **Open** from the context menu
+3. Click **Open** in the dialog that appears
+
+You only need to do this once. Alternatively, build from source by opening `macos/NamingPaper/NamingPaper.xcodeproj` in Xcode.
 
 ## Quick Start
 
