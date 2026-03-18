@@ -103,12 +103,24 @@ actor DatabaseService {
 
     // MARK: - FTS5 Search
 
+    /// Convert user query to FTS5 prefix query: each word gets a `*` suffix
+    /// so "asset pric" matches "asset pricing", "assets", "prices", etc.
+    private func fts5PrefixQuery(_ query: String) -> String {
+        query.split(separator: " ")
+            .map { String($0).replacingOccurrences(of: "\"", with: "") }
+            .filter { !$0.isEmpty }
+            .map { "\($0)*" }
+            .joined(separator: " ")
+    }
+
     func search(query: String) -> [Paper] {
         guard let db else { return [] }
         guard !query.trimmingCharacters(in: .whitespaces).isEmpty else {
             return listPapers(limit: 1000)
         }
 
+        // Try FTS5 prefix search first
+        let ftsQuery = fts5PrefixQuery(query)
         let sql = """
             SELECT p.* FROM papers p
             JOIN papers_fts fts ON p.rowid = fts.rowid
@@ -120,7 +132,37 @@ actor DatabaseService {
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
         defer { sqlite3_finalize(stmt) }
 
-        sqlite3_bind_text(stmt, 1, (query as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 1, (ftsQuery as NSString).utf8String, -1, nil)
+
+        var papers: [Paper] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            papers.append(paperFromRow(stmt))
+        }
+
+        // Fallback to LIKE search if FTS returns nothing (handles substring matches)
+        if papers.isEmpty {
+            return likeFallbackSearch(query)
+        }
+        return papers
+    }
+
+    private func likeFallbackSearch(_ query: String) -> [Paper] {
+        guard let db else { return [] }
+        let pattern = "%\(query)%"
+        let sql = """
+            SELECT * FROM papers
+            WHERE title LIKE ? OR authors LIKE ? OR journal LIKE ?
+               OR summary LIKE ? OR keywords LIKE ?
+            ORDER BY title COLLATE NOCASE ASC
+            LIMIT 200
+        """
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+
+        for i: Int32 in 1...5 {
+            sqlite3_bind_text(stmt, i, (pattern as NSString).utf8String, -1, nil)
+        }
 
         var papers: [Paper] = []
         while sqlite3_step(stmt) == SQLITE_ROW {
@@ -150,7 +192,7 @@ actor DatabaseService {
 
         if hasQuery {
             baseSQL = "SELECT p.* FROM papers p JOIN papers_fts fts ON p.rowid = fts.rowid WHERE papers_fts MATCH ?"
-            params.append(query!)
+            params.append(fts5PrefixQuery(query!))
         } else {
             baseSQL = "SELECT * FROM papers p WHERE 1=1"
         }
