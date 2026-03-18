@@ -17,14 +17,14 @@ AI-powered academic PDF renamer with a native macOS app and paper library.
 
 ```bash
 # Using uv (recommended)
-uv tool install namingpaper
+uv tool install git+https://github.com/DanTsai0903/namingpaper-desktop.git
 
 # Using pipx
-pipx install namingpaper
+pipx install git+https://github.com/DanTsai0903/namingpaper-desktop.git
 
 # With optional cloud providers
-uv tool install "namingpaper[openai]"
-uv tool install "namingpaper[gemini]"
+uv tool install "namingpaper[openai] @ git+https://github.com/DanTsai0903/namingpaper-desktop.git"
+uv tool install "namingpaper[gemini] @ git+https://github.com/DanTsai0903/namingpaper-desktop.git"
 ```
 
 ### macOS App
