@@ -42,6 +42,7 @@
 		A10021000000000000000021 /* Quartz.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A20021000000000000000021 /* Quartz.framework */; };
 		A10024000000000000000024 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20024000000000000000024 /* KeychainService.swift */; };
 		A10025000000000000000025 /* TemplatePrefsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20025000000000000000025 /* TemplatePrefsView.swift */; };
+		A10026000000000000000026 /* DirectoryMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20026000000000000000026 /* DirectoryMonitor.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -82,6 +83,7 @@
 		A20023000000000000000023 /* NamingPaper.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NamingPaper.entitlements; sourceTree = "<group>"; };
 		A20024000000000000000024 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
 		A20025000000000000000025 /* TemplatePrefsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplatePrefsView.swift; sourceTree = "<group>"; };
+		A20026000000000000000026 /* DirectoryMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectoryMonitor.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -191,6 +193,7 @@
 				A2001A0000000000000001A /* CLIService.swift */,
 				A2001B0000000000000001B /* ConfigService.swift */,
 				A20024000000000000000024 /* KeychainService.swift */,
+				A20026000000000000000026 /* DirectoryMonitor.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -369,6 +372,7 @@
 				A1001C0000000000000001C /* KeyboardShortcuts.swift in Sources */,
 				A10024000000000000000024 /* KeychainService.swift in Sources */,
 				A10025000000000000000025 /* TemplatePrefsView.swift in Sources */,
+				A10026000000000000000026 /* DirectoryMonitor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

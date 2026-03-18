@@ -56,6 +56,7 @@ class LibraryViewModel {
 
     private let db = DatabaseService.shared
     private var pollTimer: Timer?
+    private let directoryMonitor = DirectoryMonitor()
 
     // MARK: - Lifecycle
 
@@ -65,10 +66,12 @@ class LibraryViewModel {
         setupDockDropHandler()
         Task { await loadLibrary() }
         startPolling()
+        startDirectoryMonitor()
     }
 
     deinit {
         pollTimer?.invalidate()
+        directoryMonitor.stop()
     }
 
     // MARK: - Data Loading
@@ -139,6 +142,20 @@ class LibraryViewModel {
         }
     }
 
+    // MARK: - Directory Monitoring
+
+    private func startDirectoryMonitor() {
+        let papersPath = ConfigService.shared.readConfig().papersDir
+        directoryMonitor.onChange = { [weak self] in
+            Task { [weak self] in
+                guard let self, self.cliAvailable else { return }
+                _ = try? await CLIService.shared.syncLibrary()
+                await self.forceRefresh()
+            }
+        }
+        directoryMonitor.start(path: papersPath)
+    }
+
     // MARK: - Polling
 
     private func startPolling() {
@@ -164,8 +181,13 @@ class LibraryViewModel {
             self?.pollTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
                 Task { await self?.refresh() }
             }
-            // Also refresh immediately on activation
-            Task { await self?.refresh() }
+            // Sync and refresh — files may have changed while app was inactive
+            Task {
+                if let self, self.cliAvailable {
+                    _ = try? await CLIService.shared.syncLibrary()
+                    await self.forceRefresh()
+                }
+            }
         }
     }
 
