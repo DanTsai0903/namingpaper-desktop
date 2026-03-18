@@ -115,15 +115,8 @@ actor CLIService {
 
     // MARK: - CLI Discovery
 
-    func findCLI(userConfiguredPath: String? = nil) -> String? {
-        // 1. User-configured path
-        if let path = userConfiguredPath, !path.isEmpty,
-           FileManager.default.isExecutableFile(atPath: path) {
-            cliPath = path
-            return path
-        }
-
-        // 2. ~/.local/bin/namingpaper (uv/pipx default)
+    func findCLI() -> String? {
+        // 1. ~/.local/bin/namingpaper (uv tool / pipx default)
         let home = FileManager.default.homeDirectoryForCurrentUser
         let localBin = home.appendingPathComponent(".local/bin/namingpaper").path
         if FileManager.default.isExecutableFile(atPath: localBin) {
@@ -131,7 +124,7 @@ actor CLIService {
             return localBin
         }
 
-        // 3. Search $PATH
+        // 2. Search $PATH
         if let pathEnv = ProcessInfo.processInfo.environment["PATH"] {
             for dir in pathEnv.split(separator: ":") {
                 let candidate = "\(dir)/namingpaper"
@@ -427,7 +420,7 @@ enum CLIError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notFound:
-            return "namingpaper CLI not found. Configure the path in Preferences."
+            return "namingpaper CLI not found. Install it with: uv tool install namingpaper"
         case .executionFailed(let msg):
             return "CLI execution failed: \(msg)"
         }

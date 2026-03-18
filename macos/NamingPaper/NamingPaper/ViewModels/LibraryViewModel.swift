@@ -88,9 +88,7 @@ class LibraryViewModel {
         categories = await db.listCategories()
         isEmpty = allPapers.isEmpty
 
-        // Pass user-configured CLI path from Preferences
-        let storedCLIPath = UserDefaults.standard.string(forKey: "cliPath")
-        _ = await CLIService.shared.findCLI(userConfiguredPath: storedCLIPath)
+        _ = await CLIService.shared.findCLI()
         let available = await CLIService.shared.isAvailable
         cliAvailable = available
     }
