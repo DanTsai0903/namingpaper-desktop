@@ -90,16 +90,9 @@ def format_journal(journal: str, journal_abbrev: str | None) -> str:
     return journal_abbrev or journal
 
 
-def format_title(title: str, max_words: int = 6) -> str:
-    """Format title for filename, truncating if needed."""
-    # Take first N words
-    all_words = title.split()
-    words = all_words[:max_words]
-    result = " ".join(words)
-    # Add ellipsis if truncated
-    if len(all_words) > max_words:
-        result = result.rstrip(".,;:") + "..."
-    return result
+def format_title(title: str) -> str:
+    """Format title for filename."""
+    return title
 
 
 def build_filename(

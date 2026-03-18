@@ -10,6 +10,7 @@ from namingpaper.models import PDFContent, PaperMetadata
 
 _RE_JSON_BLOCK = re.compile(r"```json\s*(.*?)```", re.DOTALL)
 _RE_CODE_BLOCK = re.compile(r"```\s*(.*?)```", re.DOTALL)
+_RE_JSON_OBJECT = re.compile(r"\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}", re.DOTALL)
 
 
 EXTRACTION_PROMPT = """Extract metadata from this academic paper.
@@ -43,6 +44,8 @@ Only return valid JSON, no other text."""
 class AIProvider(ABC):
     """Abstract base class for AI providers."""
 
+    IMAGE_FALLBACK_MIN_TEXT_CHARS = 100
+
     @abstractmethod
     async def extract_metadata(self, content: PDFContent) -> PaperMetadata:
         """Extract paper metadata using the AI model.
@@ -61,6 +64,29 @@ class AIProvider(ABC):
             return text
         return text[:max_chars] + "\n\n[Text truncated...]"
 
+    def _has_usable_text(self, text: str | None, min_chars: int | None = None) -> bool:
+        """Return True when PDF text extraction is good enough to skip vision input."""
+        threshold = min_chars or self.IMAGE_FALLBACK_MIN_TEXT_CHARS
+        return bool(text and len(text.strip()) > threshold)
+
+    def _should_include_image(
+        self, content: PDFContent, min_chars: int | None = None
+    ) -> bool:
+        """Only include the page image when text extraction looks insufficient."""
+        return bool(content.first_page_image) and not self._has_usable_text(
+            content.text, min_chars=min_chars
+        )
+
+    async def call_raw(self, prompt: str) -> str:
+        """Send a raw prompt and return the response text.
+
+        Subclasses should override for efficient implementation.
+        Raises NotImplementedError if not supported.
+        """
+        raise NotImplementedError(
+            f"{type(self).__name__} does not support raw prompts"
+        )
+
     def _parse_response_json(self, response_text: str, provider_name: str) -> PaperMetadata:
         """Extract JSON from AI response text and return PaperMetadata.
 
@@ -77,11 +103,23 @@ class AIProvider(ABC):
 
         try:
             data = json.loads(json_text.strip())
-        except json.JSONDecodeError as e:
-            raise RuntimeError(
-                f"Failed to parse JSON from {provider_name} response: {e}\n"
-                f"Response: {response_text[:500]}"
-            ) from e
+        except json.JSONDecodeError:
+            # Fallback: find the first JSON object in the response
+            # (handles models that emit thinking/reasoning before JSON)
+            obj_match = _RE_JSON_OBJECT.search(response_text)
+            if obj_match:
+                try:
+                    data = json.loads(obj_match.group())
+                except json.JSONDecodeError as e2:
+                    raise RuntimeError(
+                        f"Failed to parse JSON from {provider_name} response: {e2}\n"
+                        f"Response: {response_text[:500]}"
+                    ) from e2
+            else:
+                raise RuntimeError(
+                    f"No JSON found in {provider_name} response.\n"
+                    f"Response: {response_text[:500]}"
+                )
 
         try:
             return PaperMetadata(**data)

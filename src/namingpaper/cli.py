@@ -92,7 +92,7 @@ def rename(
         typer.Option(
             "--provider",
             "-p",
-            help="AI provider to use (claude, openai, gemini, ollama)",
+            help="AI provider to use (claude, openai, gemini, ollama, omlx)",
         ),
     ] = None,
     model: Annotated[
@@ -137,6 +137,10 @@ def rename(
             help="How to handle filename collisions",
         ),
     ] = CollisionStrategy.SKIP,
+    reasoning: Annotated[
+        bool | None,
+        typer.Option("--reasoning/--no-reasoning", help="Enable/disable reasoning mode"),
+    ] = None,
 ) -> None:
     """Rename a PDF file based on AI-extracted metadata.
 
@@ -148,19 +152,23 @@ def rename(
         console.print(f"[red]Error:[/red] File must be a PDF: {pdf_path}")
         raise typer.Exit(1)
 
-    # Validate template if provided
-    if template:
-        from namingpaper.template import validate_template, get_template
-        template_str = get_template(template)
-        is_valid, error = validate_template(template_str)
-        if not is_valid:
-            console.print(f"[red]Invalid template:[/red] {error}")
-            raise typer.Exit(1)
+    # Resolve template: CLI flag > config/env > default
+    settings = get_settings()
+    if template is None:
+        template = settings.template
+
+    # Validate template
+    from namingpaper.template import validate_template, get_template
+    template_str = get_template(template)
+    is_valid, error = validate_template(template_str)
+    if not is_valid:
+        console.print(f"[red]Invalid template:[/red] {error}")
+        raise typer.Exit(1)
 
     # Extract metadata and plan rename
     with console.status("[bold blue]Extracting metadata..."):
         try:
-            operation = plan_rename_sync(pdf_path, provider_name=provider, model_name=model, ocr_model=ocr_model, keep_alive="0s")
+            operation = plan_rename_sync(pdf_path, provider_name=provider, model_name=model, ocr_model=ocr_model, keep_alive="0s", reasoning=reasoning)
         except LowConfidenceError as e:
             console.print(
                 f"[yellow]Skipped:[/yellow] {e}"
@@ -173,11 +181,10 @@ def rename(
             console.print(f"[red]Error extracting metadata:[/red] {e}")
             raise typer.Exit(1)
 
-    # Apply template if provided
-    if template:
-        from namingpaper.template import build_filename_from_template
-        filename = build_filename_from_template(operation.metadata, template)
-        operation.destination = pdf_path.parent / filename
+    # Apply template
+    from namingpaper.template import build_filename_from_template
+    filename = build_filename_from_template(operation.metadata, template)
+    operation.destination = pdf_path.parent / filename
 
     # If output_dir specified, update destination to that directory
     copy_mode = output_dir is not None
@@ -287,7 +294,7 @@ def batch(
         typer.Option(
             "--provider",
             "-p",
-            help="AI provider to use (claude, openai, gemini, ollama)",
+            help="AI provider to use (claude, openai, gemini, ollama, omlx)",
         ),
     ] = None,
     model: Annotated[
@@ -336,9 +343,9 @@ def batch(
         int,
         typer.Option(
             "--parallel",
-            help="Number of concurrent extractions (1 = sequential)",
+            help="Concurrent extractions (0 = auto: 4 for oMLX, 1 for others)",
         ),
-    ] = 1,
+    ] = 0,
     json_output: Annotated[
         bool,
         typer.Option(
@@ -372,13 +379,17 @@ def batch(
     from namingpaper.template import validate_template, get_template
     import json
 
-    # Validate template if provided
-    if template:
-        template_str = get_template(template)
-        is_valid, error = validate_template(template_str)
-        if not is_valid:
-            console.print(f"[red]Invalid template:[/red] {error}")
-            raise typer.Exit(1)
+    # Resolve template: CLI flag > config/env > default
+    settings = get_settings()
+    if template is None:
+        template = settings.template
+
+    # Validate template
+    template_str = get_template(template)
+    is_valid, error = validate_template(template_str)
+    if not is_valid:
+        console.print(f"[red]Invalid template:[/red] {error}")
+        raise typer.Exit(1)
 
     # Scan directory
     console.print(f"[blue]Scanning[/blue] {directory}...")
@@ -603,6 +614,7 @@ def config(
             "Ollama OCR Model",
             settings.ollama_ocr_model or "[dim]default (deepseek-ocr)[/dim]",
         )
+        table.add_row("Template", settings.template)
         table.add_row("Max Authors", str(settings.max_authors))
         table.add_row("Max Filename Length", str(settings.max_filename_length))
 
@@ -632,12 +644,19 @@ def templates() -> None:
         "simple": "Smith, Wang - 2023 - Asset pricing....pdf",
     }
 
+    settings = get_settings()
+    current = settings.template
+
     for name, pattern in list_presets().items():
-        table.add_row(name, pattern, examples.get(name, ""))
+        display_name = f"[bold]{name} ✓[/bold]" if name == current else name
+        table.add_row(display_name, pattern, examples.get(name, ""))
 
     console.print(table)
     console.print()
+    if current not in list_presets():
+        console.print(f"[dim]Current template (custom):[/dim] {current}")
     console.print("[dim]Use with: namingpaper batch --template <name|pattern>[/dim]")
+    console.print("[dim]Set default: add 'template = \"<name>\"' to ~/.namingpaper/config.toml[/dim]")
 
 
 @app.command()
@@ -647,7 +666,7 @@ def check(
         typer.Option(
             "--provider",
             "-p",
-            help="Provider to check (claude, openai, gemini, ollama)",
+            help="Provider to check (claude, openai, gemini, ollama, omlx)",
         ),
     ] = None,
 ) -> None:
@@ -708,6 +727,30 @@ def check(
                 f"  3. Pull the text model: ollama pull {text_model}\n"
                 f"  4. (Optional, for scanned PDFs) ollama pull {ocr_model}\n\n"
                 "Or use a different provider: namingpaper rename --provider claude <file>"
+            )
+            raise typer.Exit(1)
+    elif provider_name == "omlx":
+        text_model = settings.model_name or "mlx-community/Qwen3-8B-4bit"
+        ocr_model = settings.omlx_ocr_model or "mlx-community/Qwen2.5-VL-7B-Instruct-4bit"
+        base_url = settings.omlx_base_url
+
+        try:
+            resp = httpx.get(f"{base_url}/v1/models", timeout=5.0)
+            resp.raise_for_status()
+            table.add_row("oMLX server", "[green]OK[/green]", base_url)
+            table.add_row("Text model", "[green]SET[/green]", text_model)
+            table.add_row("OCR model", "[yellow]OPTIONAL[/yellow]", ocr_model)
+        except (httpx.ConnectError, httpx.HTTPError):
+            table.add_row("oMLX server", "[red]FAIL[/red]", f"Cannot connect to {base_url}")
+            all_ok = False
+
+            console.print(table)
+            console.print()
+            console.print(
+                "[yellow]oMLX is not reachable. To set up:[/yellow]\n"
+                "  1. Install oMLX: brew tap jundot/omlx && brew install omlx\n"
+                "  2. Start the server: brew services start omlx\n\n"
+                "Or use Ollama instead: namingpaper rename --provider ollama <file>"
             )
             raise typer.Exit(1)
     else:
@@ -931,6 +974,489 @@ def update(
         console.print(result.stderr.strip())
     console.print(f"[yellow]Try running manually:[/yellow] {cmd_display}")
     raise typer.Exit(result.returncode)
+
+
+@app.command()
+def add(
+    path: Annotated[
+        Path,
+        typer.Argument(
+            help="Path to a PDF file or directory",
+            exists=True,
+            resolve_path=True,
+        ),
+    ],
+    execute: Annotated[
+        bool,
+        typer.Option(
+            "--execute", "-x",
+            help="Actually add to library (default is dry-run)",
+        ),
+    ] = False,
+    yes: Annotated[
+        bool,
+        typer.Option("--yes", "-y", help="Skip confirmation prompts"),
+    ] = False,
+    copy_mode: Annotated[
+        bool,
+        typer.Option("--copy", help="Copy file instead of moving"),
+    ] = False,
+    recursive: Annotated[
+        bool,
+        typer.Option("--recursive", "-r", help="Scan subdirectories"),
+    ] = False,
+    provider: Annotated[
+        str | None,
+        typer.Option("--provider", "-p", help="AI provider"),
+    ] = None,
+    model: Annotated[
+        str | None,
+        typer.Option("--model", "-m", help="Override model"),
+    ] = None,
+    ocr_model: Annotated[
+        str | None,
+        typer.Option("--ocr-model", help="Override OCR model"),
+    ] = None,
+    template: Annotated[
+        str | None,
+        typer.Option("--template", "-t", help="Filename template"),
+    ] = None,
+    category: Annotated[
+        str | None,
+        typer.Option("--category", "-c", help="Override category (skip AI categorization)"),
+    ] = None,
+    parallel: Annotated[
+        int,
+        typer.Option("--parallel", help="Concurrent extractions for directories (default: 1)"),
+    ] = 1,
+    filename: Annotated[
+        str | None,
+        typer.Option("--filename", "-f", help="Override AI-generated filename"),
+    ] = None,
+    no_rename: Annotated[
+        bool,
+        typer.Option("--no-rename", help="Keep original filename (categorize only)"),
+    ] = False,
+    reasoning: Annotated[
+        bool | None,
+        typer.Option("--reasoning/--no-reasoning", help="Enable/disable reasoning mode"),
+    ] = None,
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="Output results as JSON"),
+    ] = False,
+    metadata_json: Annotated[
+        str | None,
+        typer.Option("--metadata-json", help="Pre-extracted metadata as JSON (skip AI extraction)"),
+    ] = None,
+) -> None:
+    """Add paper(s) to the library: rename, summarize, categorize, and file."""
+    import asyncio
+    import json
+    from namingpaper.database import Database
+    from namingpaper.library import add_paper as _add_paper, import_directory
+
+    # Resolve template: CLI flag > config/env > default
+    settings = get_settings()
+    if template is None:
+        template = settings.template
+
+    # Parse pre-extracted metadata JSON
+    pre_extracted = None
+    if metadata_json:
+        try:
+            pre_extracted = json.loads(metadata_json)
+        except json.JSONDecodeError as e:
+            if json_output:
+                print(json.dumps({"status": "error", "error": f"Invalid --metadata-json: {e}"}))
+            else:
+                console.print(f"[red]Error:[/red] Invalid --metadata-json: {e}")
+            raise typer.Exit(1)
+
+    with Database() as db:
+        if path.is_dir():
+            results = asyncio.run(import_directory(
+                path, db=db,
+                provider_name=provider, model_name=model, ocr_model=ocr_model,
+                template=template, copy=copy_mode, auto_yes=yes,
+                execute=execute, recursive=recursive, parallel=parallel,
+            ))
+            added = sum(1 for r in results if r.paper and not r.skipped)
+            skipped = sum(1 for r in results if r.skipped)
+            errors = sum(1 for r in results if r.error)
+            console.print(
+                f"\n[bold]Summary:[/bold] "
+                f"[green]{added} added[/green], "
+                f"[yellow]{skipped} skipped[/yellow], "
+                f"[red]{errors} errors[/red]"
+            )
+        else:
+            if path.suffix.lower() != ".pdf":
+                if json_output:
+                    print(json.dumps({"status": "error", "error": f"Not a PDF file: {path}"}))
+                else:
+                    console.print(f"[red]Error:[/red] Not a PDF file: {path}")
+                raise typer.Exit(1)
+
+            result = asyncio.run(_add_paper(
+                path, db=db,
+                provider_name=provider, model_name=model, ocr_model=ocr_model,
+                template=template, copy=copy_mode, auto_yes=yes,
+                execute=execute, category_override=category,
+                filename_override=filename, no_rename=no_rename,
+                reasoning=reasoning,
+                pre_extracted=pre_extracted,
+            ))
+
+            if result.skipped and result.existing:
+                if json_output:
+                    print(json.dumps({
+                        "status": "skipped",
+                        "existing_id": result.existing.id,
+                        "source": str(path),
+                    }))
+                else:
+                    console.print(
+                        f"[yellow]Already in library:[/yellow] {result.existing.file_path}"
+                    )
+                return
+
+            if result.error:
+                if json_output:
+                    print(json.dumps({"status": "error", "error": result.error, "source": str(path)}))
+                else:
+                    console.print(f"[red]Error:[/red] {result.error}")
+                raise typer.Exit(1)
+
+            if result.paper:
+                paper = result.paper
+
+                if json_output:
+                    print(json.dumps({
+                        "status": "ok",
+                        "source": str(path),
+                        "paper": {
+                            "title": paper.title,
+                            "authors": paper.authors,
+                            "authors_full": paper.authors_full,
+                            "year": paper.year,
+                            "journal": paper.journal,
+                            "journal_abbrev": paper.journal_abbrev,
+                            "summary": paper.summary,
+                            "keywords": paper.keywords,
+                            "category": paper.category,
+                            "filename": Path(paper.file_path).name,
+                            "destination": paper.file_path,
+                            "confidence": paper.confidence,
+                        },
+                    }))
+                else:
+                    table = Table(show_header=False)
+                    table.add_column("Field", style="cyan")
+                    table.add_column("Value")
+                    table.add_row("Title", paper.title)
+                    table.add_row("Authors", ", ".join(paper.authors))
+                    table.add_row("Year", str(paper.year))
+                    table.add_row("Journal", paper.journal)
+                    if paper.summary:
+                        table.add_row("Summary", paper.summary)
+                    if paper.keywords:
+                        table.add_row("Keywords", ", ".join(paper.keywords))
+                    table.add_row("Category", paper.category or "Unsorted")
+                    table.add_row("Destination", paper.file_path)
+                    console.print(table)
+
+                    if not execute:
+                        console.print("\n[dim]Dry run mode. Use --execute to add to library.[/dim]")
+
+
+@app.command()
+def search(
+    query: Annotated[
+        str,
+        typer.Argument(help="Search query"),
+    ],
+    author: Annotated[
+        str | None,
+        typer.Option("--author", help="Filter by author"),
+    ] = None,
+    year: Annotated[
+        str | None,
+        typer.Option("--year", help="Filter by year or range (e.g., 2020 or 2020-2024)"),
+    ] = None,
+    journal: Annotated[
+        str | None,
+        typer.Option("--journal", help="Filter by journal"),
+    ] = None,
+    category: Annotated[
+        str | None,
+        typer.Option("--category", help="Filter by category"),
+    ] = None,
+    smart: Annotated[
+        bool,
+        typer.Option("--smart", help="Enable AI semantic search"),
+    ] = False,
+) -> None:
+    """Search the paper library."""
+    import asyncio
+    from namingpaper.database import Database
+    from namingpaper.models import SearchFilter
+    from namingpaper.library import search_library, smart_search
+
+    # Parse year filter
+    year_from = year_to = None
+    if year:
+        if "-" in year:
+            parts = year.split("-", 1)
+            year_from, year_to = int(parts[0]), int(parts[1])
+        else:
+            year_from = year_to = int(year)
+
+    filters = SearchFilter(
+        author=author,
+        year_from=year_from,
+        year_to=year_to,
+        journal=journal,
+        category=category,
+        smart=smart,
+    )
+
+    use_smart = smart or len(query.split()) >= 6
+
+    with Database() as db:
+        if use_smart:
+            papers = asyncio.run(smart_search(db, query))
+        else:
+            papers = search_library(db, query=query, filters=filters)
+
+    if not papers:
+        console.print("[yellow]No papers found.[/yellow]")
+        return
+
+    table = Table(title=f"Results for \"{query}\"")
+    table.add_column("ID", style="dim", width=8)
+    table.add_column("Year", width=6)
+    table.add_column("Authors", max_width=25)
+    table.add_column("Category", max_width=25)
+    table.add_column("Title", max_width=40)
+
+    for p in papers:
+        table.add_row(
+            p.id,
+            str(p.year),
+            ", ".join(p.authors[:3]),
+            p.category or "Unsorted",
+            p.title[:40] + ("..." if len(p.title) > 40 else ""),
+        )
+
+    console.print(table)
+    console.print(f"\n{len(papers)} paper(s) found.")
+
+
+@app.command(name="list")
+def list_papers(
+    category: Annotated[
+        str | None,
+        typer.Option("--category", help="Filter by category"),
+    ] = None,
+    sort: Annotated[
+        str,
+        typer.Option("--sort", help="Sort by: year, author, title, date-added"),
+    ] = "date-added",
+    limit: Annotated[
+        int,
+        typer.Option("--limit", help="Max results to show"),
+    ] = 20,
+) -> None:
+    """List papers in the library."""
+    from namingpaper.database import Database
+
+    sort_map = {"date-added": "created_at", "year": "year", "author": "authors", "title": "title"}
+    sort_by = sort_map.get(sort, "created_at")
+
+    with Database() as db:
+        papers = db.list_papers(category=category, sort_by=sort_by, limit=limit)
+
+    if not papers:
+        console.print("[yellow]No papers in library.[/yellow]")
+        return
+
+    table = Table(title="Paper Library")
+    table.add_column("ID", style="dim", width=8)
+    table.add_column("Year", width=6)
+    table.add_column("Authors", max_width=25)
+    table.add_column("Category", max_width=25)
+    table.add_column("Title", max_width=40)
+
+    for p in papers:
+        table.add_row(
+            p.id,
+            str(p.year),
+            ", ".join(p.authors[:3]),
+            p.category or "Unsorted",
+            p.title[:40] + ("..." if len(p.title) > 40 else ""),
+        )
+
+    console.print(table)
+    console.print(f"\n{len(papers)} paper(s) shown.")
+
+
+@app.command()
+def info(
+    paper_id: Annotated[
+        str,
+        typer.Argument(help="Paper ID"),
+    ],
+) -> None:
+    """Show detailed info for a paper."""
+    from namingpaper.database import Database
+
+    with Database() as db:
+        paper = db.get_paper(paper_id)
+
+    if not paper:
+        console.print(f"[red]Paper not found:[/red] {paper_id}")
+        raise typer.Exit(1)
+
+    table = Table(title=f"Paper: {paper_id}", show_header=False)
+    table.add_column("Field", style="cyan")
+    table.add_column("Value")
+
+    table.add_row("ID", paper.id)
+    table.add_row("Title", paper.title)
+    table.add_row("Authors", ", ".join(paper.authors))
+    if paper.authors_full:
+        table.add_row("Authors (full)", ", ".join(paper.authors_full))
+    table.add_row("Year", str(paper.year))
+    table.add_row("Journal", paper.journal)
+    if paper.journal_abbrev:
+        table.add_row("Abbreviation", paper.journal_abbrev)
+    table.add_row("Category", paper.category or "Unsorted")
+    table.add_row("File", paper.file_path)
+    if paper.summary:
+        table.add_row("Summary", paper.summary)
+    if paper.keywords:
+        table.add_row("Keywords", ", ".join(paper.keywords))
+    if paper.confidence is not None:
+        table.add_row("Confidence", f"{paper.confidence:.0%}")
+    table.add_row("Added", paper.created_at)
+    table.add_row("Updated", paper.updated_at)
+    table.add_row("SHA-256", paper.sha256)
+
+    console.print(table)
+
+
+@app.command()
+def remove(
+    paper_id: Annotated[
+        str,
+        typer.Argument(help="Paper ID to remove"),
+    ],
+    delete_file: Annotated[
+        bool,
+        typer.Option("--delete-file", help="Also delete the file from disk"),
+    ] = False,
+    execute: Annotated[
+        bool,
+        typer.Option("--execute", "-x", help="Actually remove (default is dry-run)"),
+    ] = False,
+    yes: Annotated[
+        bool,
+        typer.Option("--yes", "-y", help="Skip confirmation"),
+    ] = False,
+) -> None:
+    """Remove a paper from the library."""
+    from namingpaper.database import Database
+    from namingpaper.library import remove_paper
+
+    with Database() as db:
+        paper = db.get_paper(paper_id)
+        if not paper:
+            console.print(f"[red]Paper not found:[/red] {paper_id}")
+            raise typer.Exit(1)
+
+        console.print(f"Paper: [bold]{paper.title}[/bold]")
+        console.print(f"File: {paper.file_path}")
+
+        if not execute:
+            console.print("\n[dim]Dry run mode. Use --execute to remove.[/dim]")
+            return
+
+        if not yes:
+            msg = "Remove from library"
+            if delete_file:
+                msg += " AND delete file from disk"
+            confirmed = typer.confirm(f"{msg}?")
+            if not confirmed:
+                console.print("[yellow]Cancelled.[/yellow]")
+                return
+
+        removed = remove_paper(db, paper_id, delete_file=delete_file)
+        if removed:
+            console.print("[green]Removed from library.[/green]")
+            if delete_file:
+                console.print("[green]File deleted.[/green]")
+
+
+@app.command()
+def sync(
+    execute: Annotated[
+        bool,
+        typer.Option("--execute", "-x", help="Apply fixes"),
+    ] = False,
+    yes: Annotated[
+        bool,
+        typer.Option("--yes", "-y", help="Skip confirmation"),
+    ] = False,
+) -> None:
+    """Sync library database with filesystem."""
+    from namingpaper.database import Database
+    from namingpaper.library import sync_library
+
+    with Database() as db:
+        untracked, missing, moved = sync_library(db, execute=execute)
+
+    if not untracked and not missing and not moved:
+        console.print("[green]Library is in sync.[/green]")
+        return
+
+    if moved:
+        console.print(f"\n[green]{len(moved)} moved file(s){' updated' if execute else ' detected'}:[/green]")
+        for paper, new_path in moved[:10]:
+            console.print(f"  {paper.id}: → {new_path}")
+        if len(moved) > 10:
+            console.print(f"  ... and {len(moved) - 10} more")
+
+    if untracked:
+        console.print(f"\n[yellow]{len(untracked)} untracked file(s):[/yellow]")
+        for f in untracked[:10]:
+            console.print(f"  {f}")
+        if len(untracked) > 10:
+            console.print(f"  ... and {len(untracked) - 10} more")
+
+    if missing:
+        console.print(f"\n[yellow]{len(missing)} missing file(s):[/yellow]")
+        for p in missing[:10]:
+            console.print(f"  {p.id}: {p.file_path}")
+        if len(missing) > 10:
+            console.print(f"  ... and {len(missing) - 10} more")
+
+    if not execute:
+        console.print("\n[dim]Dry run mode. Use --execute to apply fixes.[/dim]")
+        return
+
+    if missing:
+        if yes or typer.confirm(f"Remove {len(missing)} missing record(s) from database?"):
+            with Database() as db:
+                for p in missing:
+                    db.delete_paper(p.id)
+            console.print(f"[green]Removed {len(missing)} missing record(s).[/green]")
+
+    if untracked:
+        console.print(
+            f"\n[dim]{len(untracked)} untracked file(s) can be added with:[/dim]"
+        )
+        console.print("[dim]  namingpaper add <file> --execute[/dim]")
 
 
 if __name__ == "__main__":

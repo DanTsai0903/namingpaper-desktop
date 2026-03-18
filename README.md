@@ -1,23 +1,19 @@
 # namingpaper
 
-A CLI tool that renames academic PDF papers using AI-extracted metadata.
+AI-powered academic PDF renamer with a native macOS app and paper library.
 
 **Before:** `1-s2.0-S0304405X13000044-main.pdf`
-
 **After:** `Fama and French, (1993, JFE), Common risk factors in the returns....pdf`
 
-## Features
+## What's in this project
 
-- Extracts metadata (authors, year, journal, title) from PDFs using AI
-- Supports multiple AI providers: Claude, OpenAI, Gemini, and Ollama (local)
-- **Batch processing** - rename entire directories at once
-- **Custom templates** - flexible filename formatting
-- Dry-run mode by default for safety
-- Copy to output directory (keeps original file)
-- Handles filename collisions (skip, increment, or overwrite)
-- Common journal abbreviations (JFE, AER, QJE, etc.)
+- **CLI tool** — rename PDFs from the terminal, one at a time or in batch
+- **macOS app** — native SwiftUI desktop app with paper library, search, and PDF preview
+- **Paper library** — SQLite-backed catalog with AI-generated summaries, categories, and full-text search
 
 ## Installation
+
+### CLI
 
 ```bash
 # Using uv (recommended)
@@ -26,424 +22,159 @@ uv tool install namingpaper
 # Using pipx
 pipx install namingpaper
 
-# With optional providers
-uv tool install "namingpaper[openai]"    # OpenAI support
-uv tool install "namingpaper[gemini]"    # Gemini support
-# or with pipx
-pipx install "namingpaper[openai]"
-pipx install "namingpaper[gemini]"
-
-# Update to latest version
-uv tool upgrade namingpaper
-# or
-pipx upgrade namingpaper
-
-# Uninstall
-uv tool uninstall namingpaper
-# or
-pipx uninstall namingpaper
-
-# Or install from source
-git clone https://github.com/DanTsai0903/namingpaper.git
-cd namingpaper
-uv sync
+# With optional cloud providers
+uv tool install "namingpaper[openai]"
+uv tool install "namingpaper[gemini]"
 ```
+
+### macOS App
+
+Open `macos/NamingPaper/NamingPaper.xcodeproj` in Xcode and build.
 
 ## Quick Start
 
-The default provider is Ollama (local, no API key needed). Install it from [ollama.com](https://ollama.com), then pull the required model:
+### CLI
+
+The default provider is Ollama (local, no API key needed). Install from [ollama.com](https://ollama.com), then:
 
 ```bash
 ollama pull qwen3:8b
 
-# Preview the rename (dry run)
-namingpaper rename paper.pdf
-
-# Actually rename the file
-namingpaper rename paper.pdf --execute
-
-# Batch rename all PDFs in a directory
-namingpaper batch ~/Downloads/papers --execute
-```
-
-### Using Cloud Providers
-
-If you want to use Claude, OpenAI, or Gemini instead of local Ollama:
-
-```bash
-# Option 1: Set environment variable (temporary, current session only)
-export NAMINGPAPER_ANTHROPIC_API_KEY=sk-ant-api03-xxxxx
-namingpaper rename paper.pdf -p claude
-
-# Option 2: Add to shell profile (permanent)
-# For zsh (macOS default):
-echo 'export NAMINGPAPER_ANTHROPIC_API_KEY=sk-ant-api03-xxxxx' >> ~/.zshrc
-source ~/.zshrc
-
-# For bash:
-echo 'export NAMINGPAPER_ANTHROPIC_API_KEY=sk-ant-api03-xxxxx' >> ~/.bashrc
-source ~/.bashrc
-
-# Option 3: Use config file (~/.namingpaper/config.toml)
-mkdir -p ~/.namingpaper
-cat > ~/.namingpaper/config.toml << EOF
-ai_provider = "claude"
-anthropic_api_key = "sk-ant-api03-xxxxx"
-EOF
-```
-
-## Usage
-
-### Rename Command
-
-Rename a single PDF file.
-
-```bash
-namingpaper rename <pdf_path> [OPTIONS]
-
-Options:
-  -x, --execute              Actually rename (default is dry-run)
-  -y, --yes                  Skip confirmation prompt
-  -p, --provider TEXT        AI provider (claude, openai, gemini, ollama)
-  -m, --model TEXT           Override the default model for the provider
-  --ocr-model TEXT           Override Ollama OCR model (default: deepseek-ocr)
-  -t, --template TEXT        Filename template or preset name
-  -o, --output-dir DIR       Copy to directory (keeps original)
-  -c, --collision STRATEGY   Handle collisions: skip, increment, overwrite
-```
-
-### Batch Command
-
-Rename multiple PDF files in a directory.
-
-```bash
-namingpaper batch <directory> [OPTIONS]
-
-Options:
-  -x, --execute              Actually rename (default is dry-run)
-  -y, --yes                  Skip confirmation prompt
-  -r, --recursive            Scan subdirectories
-  -f, --filter PATTERN       Only process files matching pattern (e.g., '2023*')
-  -p, --provider TEXT        AI provider (claude, openai, gemini, ollama)
-  -m, --model TEXT           Override the default model for the provider
-  --ocr-model TEXT           Override Ollama OCR model (default: deepseek-ocr)
-  -t, --template TEXT        Filename template or preset name
-  -o, --output-dir DIR       Copy to directory (keeps originals)
-  -c, --collision STRATEGY   Handle collisions: skip, increment, overwrite
-  --parallel N               Concurrent extractions (default: 1)
-  --json                     Output results as JSON
-```
-
-### Templates Command
-
-Show available filename templates.
-
-```bash
-namingpaper templates
-```
-
-### Version Command
-
-Show the installed namingpaper version.
-
-```bash
-namingpaper version
-namingpaper -v
-```
-
-### Update Command
-
-Show or run the update command for your environment.
-
-```bash
-# Preview detected update command
-namingpaper update
-
-# Run update automatically
-namingpaper update --execute --yes
-```
-
-### Uninstall Command
-
-Show or run the uninstall command for your environment.
-
-```bash
-# Preview detected uninstall command
-namingpaper uninstall
-
-# Run uninstall automatically
-namingpaper uninstall --execute --yes
-
-# True cleanup (also removes ~/.namingpaper config/data)
-namingpaper uninstall --execute --yes --purge
-```
-
-Notes:
-- `--purge` removes `~/.namingpaper` (for example `~/.namingpaper/config.toml`).
-- Uninstall does not remove external provider assets such as Ollama models.
-
-## Examples
-
-### Single File
-
-```bash
-# Dry run with Ollama (default)
+# Preview rename (dry run)
 namingpaper rename paper.pdf
 
 # Execute rename
 namingpaper rename paper.pdf --execute
 
-# Use a template
-namingpaper rename paper.pdf -t compact --execute
-
-# Copy to a different folder (keeps original)
-namingpaper rename paper.pdf -o ~/Papers --execute
-
-# Use Claude
-namingpaper rename paper.pdf -p claude --execute
-
-# Use OpenAI
-namingpaper rename paper.pdf -p openai --execute
-
-# Auto-increment on collision
-namingpaper rename paper.pdf -c increment --execute
-
-# Skip confirmation
-namingpaper rename paper.pdf -xy
-```
-
-### Batch Processing
-
-```bash
-# Preview all renames in a directory
-namingpaper batch ~/Downloads/papers
-
-# Execute batch rename
+# Batch rename
 namingpaper batch ~/Downloads/papers --execute
-
-# Recursive scan with subdirectories
-namingpaper batch ~/Downloads/papers -r --execute
-
-# Filter by pattern (only 2023 papers)
-namingpaper batch ~/Downloads/papers -f "2023*" --execute
-
-# Use compact template
-namingpaper batch ~/Downloads/papers -t compact --execute
-
-# Custom template
-namingpaper batch ~/Downloads/papers -t "{year} - {authors} - {title}" --execute
-
-# Copy to organized folder
-namingpaper batch ~/Downloads -o ~/Papers/Organized --execute
-
-# Parallel processing (faster)
-namingpaper batch ~/Downloads/papers --parallel 4 --execute
-
-# Output as JSON (for scripting)
-namingpaper batch ~/Downloads/papers --json
 ```
 
-### View Configuration
+For cloud providers (Claude, OpenAI, Gemini):
 
 ```bash
+export NAMINGPAPER_ANTHROPIC_API_KEY=sk-ant-...
+namingpaper rename paper.pdf -p claude --execute
+```
+
+### macOS App
+
+The app wraps the CLI and adds a visual paper library. Add papers, browse by category, search metadata, and preview PDFs — all from a native interface.
+
+Features:
+
+- Drag-and-drop or file picker to add papers
+- AI-extracted metadata with confidence scores
+- Category tree sidebar with smart organization
+- Full-text fuzzy search across titles, authors, and journals
+- Inline PDF preview and editable metadata
+- API keys stored in macOS Keychain
+
+## Paper Library
+
+```bash
+# Add a paper (rename + summarize + categorize)
+namingpaper add paper.pdf --execute
+
+# Search
+namingpaper search "risk factors"
+namingpaper search --author "Fama" --year 2020-2024
+
+# Browse
+namingpaper list --category "Finance/Asset Pricing"
+namingpaper info a3f2
+namingpaper remove a3f2 --execute
+```
+
+Papers are organized into `~/Papers/` (configurable via `NAMINGPAPER_PAPERS_DIR`) with category subfolders.
+
+## CLI Reference
+
+### `namingpaper rename <pdf>`
+
+Rename a single PDF.
+
+| Option | Description |
+|--------|-------------|
+| `-x, --execute` | Actually rename (default is dry-run) |
+| `-y, --yes` | Skip confirmation |
+| `-p, --provider` | AI provider: `ollama`, `claude`, `openai`, `gemini` |
+| `-m, --model` | Override default model |
+| `--ocr-model` | Override Ollama OCR model |
+| `-t, --template` | Filename template or preset |
+| `-o, --output-dir` | Copy to directory (keeps original) |
+| `-c, --collision` | Collision strategy: `skip`, `increment`, `overwrite` |
+
+### `namingpaper batch <directory>`
+
+Rename all PDFs in a directory.
+
+Same options as `rename`, plus:
+
+| Option | Description |
+|--------|-------------|
+| `-r, --recursive` | Scan subdirectories |
+| `-f, --filter` | Glob pattern filter |
+| `--parallel N` | Concurrent extractions |
+| `--json` | JSON output |
+
+### Other commands
+
+```bash
+namingpaper templates    # Show available templates
 namingpaper config --show
+namingpaper version
+namingpaper update --execute --yes
+namingpaper uninstall --execute --yes [--purge]
 ```
 
 ## Filename Templates
 
-Templates control how the output filename is formatted.
-
-### Preset Templates
-
-| Name | Pattern | Example |
-|------|---------|---------|
+| Preset | Pattern | Example |
+|--------|---------|---------|
 | `default` | `{authors}, ({year}, {journal}), {title}` | `Fama and French, (1993, JFE), Common risk....pdf` |
 | `compact` | `{authors} ({year}) {title}` | `Fama and French (1993) Common risk....pdf` |
-| `full` | `{authors}, ({year}, {journal_full}), {title}` | `Fama and French, (1993, Journal of Financial Economics), Common....pdf` |
+| `full` | `{authors}, ({year}, {journal_full}), {title}` | Uses full journal name |
 | `simple` | `{authors} - {year} - {title}` | `Fama and French - 1993 - Common risk....pdf` |
 
-### Template Placeholders
+Placeholders: `{authors}`, `{authors_full}`, `{authors_abbrev}`, `{year}`, `{journal}`, `{journal_full}`, `{journal_abbrev}`, `{title}`
 
-| Placeholder | Description | Example |
-|-------------|-------------|---------|
-| `{authors}` | Author surnames (comma-separated, "et al" if >3) | `Fama and French` |
-| `{authors_full}` | Author full names | `Eugene F. Fama and Kenneth R. French` |
-| `{authors_abbrev}` | Surname with initials | `Fama, E. F. and French, K. R.` |
-| `{year}` | Publication year | `1993` |
-| `{journal}` | Journal abbreviation (or full name if no abbrev) | `JFE` |
-| `{journal_abbrev}` | Journal abbreviation only | `JFE` |
-| `{journal_full}` | Full journal name | `Journal of Financial Economics` |
-| `{title}` | Paper title (truncated) | `Common risk factors in the returns...` |
+## AI Providers
 
-### Custom Templates
-
-```bash
-# Year-first format
-namingpaper rename paper.pdf -t "{year} - {authors} - {title}"
-
-# Minimal format
-namingpaper batch ~/papers -t "{authors} {year}"
-
-# Full journal name
-namingpaper batch ~/papers -t "{authors}, ({year}, {journal_full}), {title}"
-```
+| Provider | Setup | Notes |
+|----------|-------|-------|
+| **Ollama** (default) | `ollama pull qwen3:8b` | Local, no API key |
+| **oMLX** | Apple Silicon Mac | Local MLX inference |
+| **Claude** | `NAMINGPAPER_ANTHROPIC_API_KEY` | |
+| **OpenAI** | `NAMINGPAPER_OPENAI_API_KEY` | Requires `namingpaper[openai]` |
+| **Gemini** | `NAMINGPAPER_GEMINI_API_KEY` | Requires `namingpaper[gemini]` |
 
 ## Configuration
 
-### Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| `NAMINGPAPER_ANTHROPIC_API_KEY` | Anthropic API key (for Claude) |
-| `NAMINGPAPER_OPENAI_API_KEY` | OpenAI API key |
-| `NAMINGPAPER_GEMINI_API_KEY` | Google Gemini API key |
-| `NAMINGPAPER_AI_PROVIDER` | Provider: `ollama` (default), `claude`, `openai`, `gemini` |
-| `NAMINGPAPER_MODEL_NAME` | Override default text model for provider |
-| `NAMINGPAPER_OLLAMA_OCR_MODEL` | Override Ollama OCR model (default: `deepseek-ocr`) |
-| `NAMINGPAPER_OLLAMA_BASE_URL` | Ollama API URL (default: `http://localhost:11434`) |
-| `NAMINGPAPER_MAX_AUTHORS` | Max authors before "et al" (default: 3) |
-| `NAMINGPAPER_MAX_FILENAME_LENGTH` | Max filename length (default: 200) |
-
-### Config File
-
-Create `~/.namingpaper/config.toml`:
+Config priority: CLI args > env vars (`NAMINGPAPER_*`) > config file (`~/.namingpaper/config.toml`) > defaults.
 
 ```toml
-# Default provider (ollama requires no API key)
+# ~/.namingpaper/config.toml
 ai_provider = "ollama"
-ollama_base_url = "http://localhost:11434"
-# ollama_ocr_model = "deepseek-ocr"    # Override OCR model
-# model_name = "qwen3:8b"              # Override text model
-
-# Or use cloud providers
-# ai_provider = "claude"
-# anthropic_api_key = "sk-ant-..."
-
-# Formatting options
+template = "default"
 max_authors = 3
 max_filename_length = 200
 ```
 
-## AI Providers
-
-### Ollama (Default)
-
-Local LLM, no API key needed. Just have Ollama running. Text is extracted from PDFs using PyMuPDF; the OCR model is only used as a fallback for scanned/image-only PDFs.
-
-```bash
-# Pull the required model
-ollama pull qwen3:8b           # Text model (parses metadata)
-
-# Optional: OCR fallback for scanned PDFs
-ollama pull deepseek-ocr
-
-# Use it (default provider)
-namingpaper rename paper.pdf
-
-# Use a different text model
-namingpaper rename paper.pdf -m gemma2:9b
-
-# Use a different OCR model (for scanned PDFs)
-namingpaper rename paper.pdf --ocr-model llava
-```
-
-### Claude
-
-```bash
-export NAMINGPAPER_ANTHROPIC_API_KEY=sk-ant-...
-namingpaper rename paper.pdf -p claude
-
-# Use a specific Claude model
-namingpaper rename paper.pdf -p claude -m claude-haiku-4-20250514
-```
-
-### OpenAI
-
-```bash
-uv add "namingpaper[openai]"
-export NAMINGPAPER_OPENAI_API_KEY=sk-...
-namingpaper rename paper.pdf -p openai
-
-# Use a specific OpenAI model
-namingpaper rename paper.pdf -p openai -m gpt-4o-mini
-```
-
-### Gemini
-
-```bash
-uv add "namingpaper[gemini]"
-export NAMINGPAPER_GEMINI_API_KEY=...
-namingpaper rename paper.pdf -p gemini
-
-# Use a specific Gemini model
-namingpaper rename paper.pdf -p gemini -m gemini-2.0-flash
-```
-
-## Troubleshooting
-
-### Ollama connection errors
-
-```
-Cannot connect to Ollama at http://localhost:11434
-```
-
-Make sure Ollama is running:
-
-```bash
-ollama serve
-```
-
-### Model not found
-
-```
-Model 'qwen3:8b' not found in Ollama
-```
-
-Pull the required model:
-
-```bash
-ollama pull qwen3:8b
-```
-
-### Low confidence / skipped files
-
-If files are skipped with "low confidence", the AI wasn't confident the file is an academic paper. You can lower the threshold:
-
-```bash
-export NAMINGPAPER_MIN_CONFIDENCE=0.3
-```
-
-### Timeout errors
-
-For slow machines or large models, Ollama may time out. Try a smaller model:
-
-```bash
-namingpaper rename paper.pdf -m qwen3:4b
-```
+See full env var list with `namingpaper config --show`.
 
 ## Development
 
 ```bash
-# Clone and setup
-git clone https://github.com/DanTsai0903/namingpaper.git
-cd namingpaper
-uv sync --extra dev
-
-# Run tests
+git clone https://github.com/DanTsai0903/namingpaper-desktop.git
+cd namingpaper-desktop
+uv sync --all-extras --dev
 uv run pytest -v
-
-# Run a specific test
-uv run pytest tests/test_formatter.py -v
 ```
 
-## Contributing
+## Credits
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/my-feature`)
-3. Make your changes and add tests
-4. Run `uv run pytest` to verify tests pass
-5. Commit and push to your fork
-6. Open a pull request
+Originally forked from [DanTsai0903/namingpaper](https://github.com/DanTsai0903/namingpaper).
 
 ## License
 

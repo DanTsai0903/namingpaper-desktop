@@ -28,7 +28,7 @@ class ClaudeProvider(AIProvider):
         message_content: list[dict] = []
 
         # Add image if available (Claude supports vision)
-        if content.first_page_image:
+        if self._should_include_image(content):
             image_data = base64.standard_b64encode(content.first_page_image).decode(
                 "utf-8"
             )
@@ -79,3 +79,20 @@ class ClaudeProvider(AIProvider):
         response_text = response.content[0].text
 
         return self._parse_response_json(response_text, "Claude")
+
+    async def call_raw(self, prompt: str) -> str:
+        """Send a raw prompt and return response text."""
+        try:
+            response = await asyncio.to_thread(
+                self.client.messages.create,
+                model=self.model,
+                max_tokens=1024,
+                messages=[{"role": "user", "content": prompt}],
+            )
+        except anthropic.AuthenticationError:
+            raise RuntimeError(
+                "Invalid Anthropic API key. Check your NAMINGPAPER_ANTHROPIC_API_KEY."
+            )
+        if not response.content:
+            raise RuntimeError("Claude returned an empty response.")
+        return response.content[0].text

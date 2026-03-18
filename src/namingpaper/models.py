@@ -3,7 +3,7 @@
 from enum import Enum
 from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class PaperMetadata(BaseModel):
@@ -14,7 +14,12 @@ class PaperMetadata(BaseModel):
         default_factory=list, description="List of author full names"
     )
     year: int = Field(description="Publication year")
-    journal: str = Field(min_length=1, description="Full journal name")
+    journal: str = Field(default="", description="Full journal name")
+
+    @field_validator("journal", mode="before")
+    @classmethod
+    def coerce_journal_none(cls, v: object) -> object:
+        return v if v is not None else ""
     journal_abbrev: str | None = Field(
         default=None, description="Common journal abbreviation"
     )
@@ -89,3 +94,34 @@ class BatchResult(BaseModel):
     skipped: int = Field(default=0, description="Skipped due to collision or user choice")
     errors: int = Field(default=0, description="Failed with errors")
     items: list[BatchItem] = Field(default_factory=list, description="Individual results")
+
+
+class Paper(BaseModel):
+    """A paper record in the library database."""
+
+    id: str = Field(description="Short hex ID derived from content hash")
+    sha256: str = Field(description="SHA-256 content hash")
+    title: str = Field(description="Paper title")
+    authors: list[str] = Field(description="Author last names")
+    authors_full: list[str] = Field(default_factory=list, description="Author full names")
+    year: int = Field(description="Publication year")
+    journal: str = Field(description="Full journal name")
+    journal_abbrev: str | None = Field(default=None, description="Journal abbreviation")
+    summary: str | None = Field(default=None, description="AI-generated summary")
+    keywords: list[str] = Field(default_factory=list, description="Extracted keywords")
+    category: str | None = Field(default=None, description="Category folder path")
+    file_path: str = Field(description="Path to the PDF file")
+    confidence: float | None = Field(default=None, description="Extraction confidence")
+    created_at: str = Field(description="ISO 8601 creation timestamp")
+    updated_at: str = Field(description="ISO 8601 last update timestamp")
+
+
+class SearchFilter(BaseModel):
+    """Filters for library search queries."""
+
+    author: str | None = Field(default=None, description="Filter by author name")
+    year_from: int | None = Field(default=None, description="Minimum year (inclusive)")
+    year_to: int | None = Field(default=None, description="Maximum year (inclusive)")
+    journal: str | None = Field(default=None, description="Filter by journal name or abbreviation")
+    category: str | None = Field(default=None, description="Filter by category path")
+    smart: bool = Field(default=False, description="Enable AI semantic search")

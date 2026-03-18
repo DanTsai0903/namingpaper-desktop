@@ -1,12 +1,12 @@
 [project]
 name = "namingpaper"
 version = "0.2.7"
-description = "CLI tool to rename academic papers using AI-extracted metadata"
+description = "CLI tool to rename, organize, and search academic papers using AI-extracted metadata"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [{name = "DanTsai0903"}]
-keywords = ["pdf", "academic", "papers", "rename", "metadata", "ai", "cli"]
+keywords = ["pdf", "academic", "papers", "rename", "metadata", "ai", "cli", "library", "search", "organize"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
@@ -33,7 +33,7 @@ Issues = "https://github.com/DanTsai0903/namingpaper/issues"
 
 [project.optional-dependencies]
 openai = ["openai>=1.0.0"]
-gemini = ["google-generativeai>=0.5.0", "Pillow>=10.0.0"]
+gemini = ["google-genai>=1.0.0"]
 dev = ["pytest>=8.0.0", "pytest-asyncio>=0.23.0"]
 claude = [
     "anthropic>=0.30.0",

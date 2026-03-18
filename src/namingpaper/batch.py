@@ -142,6 +142,11 @@ async def process_batch(
     results: list[BatchItem] = []
     total = len(files)
 
+    # Auto-detect concurrency: oMLX supports continuous batching
+    if parallel == 0:
+        from namingpaper.providers.omlx import oMLXProvider
+        parallel = 4 if isinstance(provider, oMLXProvider) else 1
+
     try:
         if parallel <= 1:
             # Sequential processing

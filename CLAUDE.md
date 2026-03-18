@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **namingpaper** is a CLI tool that renames academic PDF files using AI-extracted metadata. It converts filenames like `1-s2.0-S0304405X13000044-main.pdf` into `Fama and French, (1993, JFE), Common risk factors in the returns....pdf`.
 
+## Rules
+
+- **Never** use `pip install`, `python -m pip`, or `uv pip`. Always use `uv sync`/`uv add`/`uv remove`. See the `uv-rules` skill before running any package commands.
+
 ## Commands
 
 ```bash

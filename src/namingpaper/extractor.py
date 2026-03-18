@@ -18,6 +18,7 @@ async def extract_metadata(
     model_name: str | None = None,
     ocr_model: str | None = None,
     keep_alive: str | None = None,
+    reasoning: bool | None = None,
 ) -> PaperMetadata:
     """Extract metadata from a PDF file.
 
@@ -41,7 +42,7 @@ async def extract_metadata(
     # Get provider
     created_provider = False
     if provider is None:
-        provider = get_provider(provider_name, model_name=model_name, ocr_model=ocr_model, keep_alive=keep_alive)
+        provider = get_provider(provider_name, model_name=model_name, ocr_model=ocr_model, keep_alive=keep_alive, reasoning=reasoning)
         created_provider = True
 
     # Extract PDF content
@@ -49,16 +50,28 @@ async def extract_metadata(
 
     # Extract metadata using AI
     try:
-        metadata = await provider.extract_metadata(content)
+        metadata = await extract_metadata_from_content(content, provider)
     finally:
         if created_provider and hasattr(provider, "aclose"):
             await provider.aclose()
 
-    # Check confidence threshold
+    return metadata
+
+
+async def extract_metadata_from_content(
+    content: PDFContent,
+    provider: AIProvider,
+) -> PaperMetadata:
+    """Extract metadata from already-loaded PDF content."""
+    metadata = await provider.extract_metadata(content)
+    return enforce_confidence_threshold(metadata)
+
+
+def enforce_confidence_threshold(metadata: PaperMetadata) -> PaperMetadata:
+    """Raise when extracted metadata falls below the configured threshold."""
     settings = get_settings()
     if metadata.confidence < settings.min_confidence:
         raise LowConfidenceError(metadata.confidence, settings.min_confidence)
-
     return metadata
 
 
@@ -69,6 +82,7 @@ async def plan_rename(
     model_name: str | None = None,
     ocr_model: str | None = None,
     keep_alive: str | None = None,
+    reasoning: bool | None = None,
 ) -> RenameOperation:
     """Plan a rename operation for a PDF file.
 
@@ -83,7 +97,7 @@ async def plan_rename(
     Returns:
         Planned rename operation with metadata
     """
-    metadata = await extract_metadata(pdf_path, provider, provider_name, model_name=model_name, ocr_model=ocr_model, keep_alive=keep_alive)
+    metadata = await extract_metadata(pdf_path, provider, provider_name, model_name=model_name, ocr_model=ocr_model, keep_alive=keep_alive, reasoning=reasoning)
     destination = build_destination(pdf_path, metadata)
 
     return RenameOperation(
@@ -100,6 +114,7 @@ def plan_rename_sync(
     model_name: str | None = None,
     ocr_model: str | None = None,
     keep_alive: str | None = None,
+    reasoning: bool | None = None,
 ) -> RenameOperation:
     """Synchronous wrapper for plan_rename."""
-    return asyncio.run(plan_rename(pdf_path, provider, provider_name, model_name=model_name, ocr_model=ocr_model, keep_alive=keep_alive))
+    return asyncio.run(plan_rename(pdf_path, provider, provider_name, model_name=model_name, ocr_model=ocr_model, keep_alive=keep_alive, reasoning=reasoning))
