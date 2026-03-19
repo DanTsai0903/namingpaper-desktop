@@ -1,3 +1,5 @@
+# Design
+
 ## Context
 
 The filename template is currently only configurable per-invocation via `--template` / `-t`. The `Settings` class in `config.py` has no `template` field. Users who prefer a non-default template must pass `--template` every time.
@@ -11,7 +13,7 @@ The config priority chain (CLI > env > config > defaults) already works for othe
 - Let users persist their preferred template in `config.toml` or via `NAMINGPAPER_TEMPLATE` env var
 - CLI `--template` continues to override the persisted value
 - Validate the template at config load time and surface clear errors
-- Expose template selection in the macOS app settings UI
+- Expose template selection in the macOS app settings
 
 **Non-Goals:**
 
@@ -47,7 +49,7 @@ The settings UI provides two modes:
 - **Custom builder** — a visual editor where:
   - Placeholder chips (authors, year, journal, title, etc.) are displayed as tappable boxes
   - Tapping a chip inserts `{placeholder}` at the cursor position in the template text field
-  - Users type separators (`, `, ` - `, `(`, `)`, etc.) directly in the text field between placeholders
+  - Users type separators (`,`, `-`, `(`, `)`, etc.) directly in the text field between placeholders
   - A live preview shows how the template would format an example paper
   - The assembled template is stored as a single string (e.g., `"{authors}, ({year}, {journal}), {title}"`)
 

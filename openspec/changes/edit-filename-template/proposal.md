@@ -1,3 +1,5 @@
+# Edit Filename Template
+
 ## Why
 
 Users must pass `--template` on every CLI invocation to use a non-default filename template. There is no way to persist a preferred template in the config file (`~/.namingpaper/config.toml`), forcing repetitive command-line flags for users who always want the same format.

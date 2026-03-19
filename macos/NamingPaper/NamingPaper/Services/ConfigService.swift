@@ -34,6 +34,10 @@ class ConfigService {
 
     private let configPath: String
 
+    var configExists: Bool {
+        FileManager.default.fileExists(atPath: configPath)
+    }
+
     init() {
         let home = FileManager.default.homeDirectoryForCurrentUser
         configPath = home.appendingPathComponent(".namingpaper/config.toml").path

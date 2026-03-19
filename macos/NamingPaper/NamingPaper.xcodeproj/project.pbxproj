@@ -43,6 +43,7 @@
 		A10024000000000000000024 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20024000000000000000024 /* KeychainService.swift */; };
 		A10025000000000000000025 /* TemplatePrefsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20025000000000000000025 /* TemplatePrefsView.swift */; };
 		A10026000000000000000026 /* DirectoryMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20026000000000000000026 /* DirectoryMonitor.swift */; };
+		A10027000000000000000027 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20027000000000000000027 /* OnboardingView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -84,6 +85,7 @@
 		A20024000000000000000024 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
 		A20025000000000000000025 /* TemplatePrefsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplatePrefsView.swift; sourceTree = "<group>"; };
 		A20026000000000000000026 /* DirectoryMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectoryMonitor.swift; sourceTree = "<group>"; };
+		A20027000000000000000027 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -182,6 +184,7 @@
 				A4000F00000000000000000F /* CommandPalette */,
 				A40010000000000000000010 /* AddPaper */,
 				A40011000000000000000011 /* Preferences */,
+			A40012000000000000000012 /* Onboarding */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -270,6 +273,14 @@
 				A20025000000000000000025 /* TemplatePrefsView.swift */,
 			);
 			path = Preferences;
+			sourceTree = "<group>";
+		};
+		A40012000000000000000012 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				A20027000000000000000027 /* OnboardingView.swift */,
+			);
+			path = Onboarding;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -373,6 +384,7 @@
 				A10024000000000000000024 /* KeychainService.swift in Sources */,
 				A10025000000000000000025 /* TemplatePrefsView.swift in Sources */,
 				A10026000000000000000026 /* DirectoryMonitor.swift in Sources */,
+			A10027000000000000000027 /* OnboardingView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

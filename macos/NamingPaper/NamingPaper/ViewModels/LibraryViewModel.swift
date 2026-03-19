@@ -154,6 +154,19 @@ class LibraryViewModel {
             }
         }
         directoryMonitor.start(path: papersPath)
+
+        // Listen for library migration from Preferences
+        NotificationCenter.default.addObserver(
+            forName: .libraryDidMigrate, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.restartDirectoryMonitor()
+            Task { await self?.forceRefresh() }
+        }
+    }
+
+    private func restartDirectoryMonitor() {
+        let papersPath = ConfigService.shared.readConfig().papersDir
+        directoryMonitor.start(path: papersPath)
     }
 
     // MARK: - Polling
@@ -471,4 +484,8 @@ class LibraryViewModel {
             }
         }
     }
+}
+
+extension Notification.Name {
+    static let libraryDidMigrate = Notification.Name("libraryDidMigrate")
 }
