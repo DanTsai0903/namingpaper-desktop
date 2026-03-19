@@ -131,12 +131,15 @@ struct AIProviderPrefsView: View {
                         }
                     }
 
-                    TextField("Model Name", text: $editModel, prompt: Text("Default"))
+                    TextField("Model Name", text: $editModel, prompt: Text(defaultModelName))
                         .textFieldStyle(.roundedBorder)
 
                     if editProvider == "ollama" || editProvider == "omlx" {
-                        TextField("OCR Model", text: $editOCRModel, prompt: Text("Default"))
+                        TextField("OCR Model", text: $editOCRModel, prompt: Text(defaultOCRModelName))
                             .textFieldStyle(.roundedBorder)
+                        Text("Used only when the PDF has no extractable text (e.g. scanned documents)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
 
@@ -189,6 +192,22 @@ struct AIProviderPrefsView: View {
                 editOCRModel = item.ocrModel
                 editApiKey = item.apiKey
             }
+        }
+    }
+
+    private var defaultModelName: String {
+        switch editProvider {
+        case "ollama": return "Default: qwen3:8b"
+        case "omlx": return "Default: Qwen3.5-9B-MLX-4bit"
+        default: return "Default"
+        }
+    }
+
+    private var defaultOCRModelName: String {
+        switch editProvider {
+        case "ollama": return "Default: deepseek-ocr"
+        case "omlx": return "Default: DeepSeek-OCR-8bit"
+        default: return "Default"
         }
     }
 

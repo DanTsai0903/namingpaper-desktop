@@ -195,7 +195,13 @@ struct CategoryTreeView: View {
                     HStack {
                         Label(node.segment, systemImage: "folder")
                         Spacer()
-                        countBadge(node.totalPaperCount)
+                        if expandedCategories.contains(node.fullPath) {
+                            if node.paperCount > 0 {
+                                countBadge(node.paperCount)
+                            }
+                        } else {
+                            countBadge(node.totalPaperCount)
+                        }
                     }
                     .contentShape(Rectangle())
                 }
