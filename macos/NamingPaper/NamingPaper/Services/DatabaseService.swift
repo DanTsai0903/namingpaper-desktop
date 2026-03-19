@@ -295,6 +295,33 @@ actor DatabaseService {
         return sqlite3_step(stmt) == SQLITE_DONE
     }
 
+    // MARK: - Update Metadata
+
+    func updatePaperMetadata(id: String, title: String, authors: String, authorsAll: String, year: Int?, journal: String, journalAbbrev: String) -> Bool {
+        guard let db else { return false }
+
+        let sql = "UPDATE papers SET title = ?, authors = ?, authors_full = ?, year = ?, journal = ?, journal_abbrev = ?, updated_at = ? WHERE id = ?"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return false }
+        defer { sqlite3_finalize(stmt) }
+
+        let now = ISO8601DateFormatter().string(from: Date())
+        sqlite3_bind_text(stmt, 1, (title as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 2, (authors as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 3, (authorsAll as NSString).utf8String, -1, nil)
+        if let year {
+            sqlite3_bind_int(stmt, 4, Int32(year))
+        } else {
+            sqlite3_bind_null(stmt, 4)
+        }
+        sqlite3_bind_text(stmt, 5, (journal as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 6, (journalAbbrev as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 7, (now as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 8, (id as NSString).utf8String, -1, nil)
+
+        return sqlite3_step(stmt) == SQLITE_DONE
+    }
+
     // MARK: - Update Keywords
 
     func updatePaperKeywords(id: String, keywords: String) -> Bool {

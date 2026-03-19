@@ -97,6 +97,7 @@ struct PaperListView: View {
                 case \Paper.yearString: viewModel.changeSort(.year)
                 case \Paper.journal: viewModel.changeSort(.journal)
                 case \Paper.journalAbbrev: viewModel.changeSort(.journal)
+                case \Paper.createdAt: viewModel.changeSort(.createdAt)
                 default: viewModel.changeSort(.title)
                 }
             }
@@ -149,6 +150,13 @@ struct PaperListView: View {
                 .width(min: 60, ideal: 100)
                 .customizationID("journalAbbrev")
                 .defaultVisibility(.hidden)
+
+            TableColumn("Date Added", value: \Paper.createdAt) { paper in
+                Text(paper.dateAddedDisplay)
+            }
+            .width(min: 80, ideal: 100)
+            .customizationID("dateAdded")
+            .defaultVisibility(.hidden)
         }
     }
 

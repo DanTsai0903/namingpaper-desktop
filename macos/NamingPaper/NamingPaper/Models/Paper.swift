@@ -30,6 +30,19 @@ struct Paper: Identifiable, Hashable, Codable, Transferable {
         year.map(String.init) ?? ""
     }
 
+    /// Display-friendly "Date Added" string parsed from ISO 8601 `createdAt`
+    var dateAddedDisplay: String {
+        guard !createdAt.isEmpty else { return "" }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let date = formatter.date(from: createdAt) ?? ISO8601DateFormatter().date(from: createdAt)
+        guard let date else { return createdAt }
+        let display = DateFormatter()
+        display.dateStyle = .medium
+        display.timeStyle = .none
+        return display.string(from: date)
+    }
+
     /// Display-friendly authors string (strips JSON array brackets/quotes)
     var authorsDisplay: String {
         parseJSONArray(authors)?.joined(separator: ", ") ?? authors

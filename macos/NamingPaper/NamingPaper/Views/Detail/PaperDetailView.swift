@@ -19,6 +19,14 @@ struct PaperDetailView: View {
     @State private var isEditingSummary = false
     @State private var editingSummaryText = ""
 
+    // Editing state for metadata
+    @State private var isEditingMetadata = false
+    @State private var editingTitle = ""
+    @State private var editingAuthors = ""
+    @State private var editingYear = ""
+    @State private var editingJournal = ""
+    @State private var editingJournalAbbrev = ""
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Compact metadata + summary at top (scrollable if needed)
@@ -31,7 +39,7 @@ struct PaperDetailView: View {
                 .padding(.top, 12)
                 .padding(.bottom, 8)
             }
-            .frame(maxHeight: summaryExpanded || isEditingKeywords || isEditingSummary ? 350 : 180)
+            .frame(maxHeight: summaryExpanded || isEditingKeywords || isEditingSummary || isEditingMetadata ? 350 : 180)
 
             Divider()
 
@@ -83,45 +91,40 @@ struct PaperDetailView: View {
 
     // MARK: - Metadata Header
 
+    private func startEditingMetadata() {
+        editingTitle = paper.title
+        editingAuthors = paper.authorsAllDisplay.isEmpty ? paper.authorsDisplay : paper.authorsAllDisplay
+        editingYear = paper.yearString
+        editingJournal = paper.journal
+        editingJournalAbbrev = paper.journalAbbrev
+        isEditingMetadata = true
+    }
+
+    private func saveMetadata() {
+        let authorNames = editingAuthors.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        let lastNames = authorNames.map { name in
+            let parts = name.split(separator: " ")
+            return parts.count > 1 ? String(parts.last!) : String(name)
+        }
+        let year = Int(editingYear.trimmingCharacters(in: .whitespaces))
+        viewModel.updateMetadata(
+            paperID: paper.id,
+            title: editingTitle.trimmingCharacters(in: .whitespaces),
+            authors: lastNames,
+            authorsAll: authorNames,
+            year: year,
+            journal: editingJournal.trimmingCharacters(in: .whitespaces),
+            journalAbbrev: editingJournalAbbrev.trimmingCharacters(in: .whitespaces)
+        )
+        isEditingMetadata = false
+    }
+
     private var metadataHeader: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(paper.title)
-                .font(.title)
-                .fontWeight(.bold)
-                .textSelection(.enabled)
-
-            Text(paper.authorsDisplay)
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .textSelection(.enabled)
-
-            HStack(spacing: 12) {
-                if let year = paper.year {
-                    Text(String(year))
-                        .font(.callout)
-                }
-
-                if !paper.journal.isEmpty {
-                    Text(paper.journal)
-                        .font(.callout)
-                        .italic()
-                }
-
-                // Category badge
-                if !paper.category.isEmpty {
-                    Button {
-                        showCategoryPicker.toggle()
-                    } label: {
-                        Text(paper.category)
-                            .font(.caption)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(Color.accentColor.opacity(0.15))
-                            .foregroundStyle(Color.accentColor)
-                            .clipShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                }
+            if isEditingMetadata {
+                metadataEditForm
+            } else {
+                metadataDisplay
             }
 
             // Keywords (collapsible, editable)
@@ -199,6 +202,122 @@ struct PaperDetailView: View {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // MARK: - Metadata Display
+
+    private var metadataDisplay: some View {
+        Group {
+            HStack(alignment: .top) {
+                Text(paper.title)
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .textSelection(.enabled)
+
+                Button {
+                    startEditingMetadata()
+                } label: {
+                    Image(systemName: "pencil")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Edit metadata")
+            }
+
+            Text(paper.authorsDisplay)
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+
+            HStack(spacing: 12) {
+                if let year = paper.year {
+                    Text(String(year))
+                        .font(.callout)
+                }
+
+                if !paper.journal.isEmpty {
+                    Text(paper.journal)
+                        .font(.callout)
+                        .italic()
+                }
+
+                if !paper.journalAbbrev.isEmpty {
+                    Text("(\(paper.journalAbbrev))")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+
+                if !paper.dateAddedDisplay.isEmpty {
+                    Text("Added \(paper.dateAddedDisplay)")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+
+                // Category badge
+                if !paper.category.isEmpty {
+                    Button {
+                        showCategoryPicker.toggle()
+                    } label: {
+                        Text(paper.category)
+                            .font(.caption)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Color.accentColor.opacity(0.15))
+                            .foregroundStyle(Color.accentColor)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    // MARK: - Metadata Edit Form
+
+    private var metadataEditForm: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            LabeledContent("Title") {
+                TextField("Title", text: $editingTitle)
+                    .textFieldStyle(.roundedBorder)
+            }
+
+            LabeledContent("Authors") {
+                TextField("e.g. Eugene F. Fama, Kenneth R. French", text: $editingAuthors)
+                    .textFieldStyle(.roundedBorder)
+            }
+
+            HStack(spacing: 16) {
+                LabeledContent("Year") {
+                    TextField("Year", text: $editingYear)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 80)
+                }
+
+                LabeledContent("Journal") {
+                    TextField("Journal", text: $editingJournal)
+                        .textFieldStyle(.roundedBorder)
+                }
+
+                LabeledContent("Abbrev") {
+                    TextField("e.g. JFE", text: $editingJournalAbbrev)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 80)
+                }
+            }
+
+            HStack {
+                Button("Save") {
+                    saveMetadata()
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+                Button("Cancel") {
+                    isEditingMetadata = false
+                }
+                .controlSize(.small)
             }
         }
     }

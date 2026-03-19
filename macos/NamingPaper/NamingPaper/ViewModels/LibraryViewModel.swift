@@ -459,6 +459,23 @@ class LibraryViewModel {
         }
     }
 
+    func updateMetadata(paperID: String, title: String, authors: [String], authorsAll: [String], year: Int?, journal: String, journalAbbrev: String) {
+        Task {
+            let authorsJSON = (try? JSONSerialization.data(withJSONObject: authors)).flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
+            let authorsAllJSON = (try? JSONSerialization.data(withJSONObject: authorsAll)).flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
+            _ = await db.updatePaperMetadata(
+                id: paperID,
+                title: title,
+                authors: authorsJSON,
+                authorsAll: authorsAllJSON,
+                year: year,
+                journal: journal,
+                journalAbbrev: journalAbbrev
+            )
+            await forceRefresh()
+        }
+    }
+
     func updateSummary(paperID: String, summary: String) {
         Task {
             _ = await db.updatePaperSummary(id: paperID, summary: summary)
