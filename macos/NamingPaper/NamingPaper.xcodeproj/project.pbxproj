@@ -44,6 +44,7 @@
 		A10025000000000000000025 /* TemplatePrefsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20025000000000000000025 /* TemplatePrefsView.swift */; };
 		A10026000000000000000026 /* DirectoryMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20026000000000000000026 /* DirectoryMonitor.swift */; };
 		A10027000000000000000027 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20027000000000000000027 /* OnboardingView.swift */; };
+		A10028000000000000000028 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20028000000000000000028 /* AboutView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -86,6 +87,7 @@
 		A20025000000000000000025 /* TemplatePrefsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplatePrefsView.swift; sourceTree = "<group>"; };
 		A20026000000000000000026 /* DirectoryMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectoryMonitor.swift; sourceTree = "<group>"; };
 		A20027000000000000000027 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		A20028000000000000000028 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -178,6 +180,7 @@
 			isa = PBXGroup;
 			children = (
 				A20009000000000000000009 /* ContentView.swift */,
+				A20028000000000000000028 /* AboutView.swift */,
 				A4000C00000000000000000C /* Sidebar */,
 				A4000D00000000000000000D /* PaperList */,
 				A4000E00000000000000000E /* Detail */,
@@ -385,6 +388,7 @@
 				A10025000000000000000025 /* TemplatePrefsView.swift in Sources */,
 				A10026000000000000000026 /* DirectoryMonitor.swift in Sources */,
 			A10027000000000000000027 /* OnboardingView.swift in Sources */,
+			A10028000000000000000028 /* AboutView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -528,7 +532,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = NamingPaper/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 namingpaper. All rights reserved.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 DanTsai0903. All rights reserved.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -558,7 +562,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = NamingPaper/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 namingpaper. All rights reserved.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 DanTsai0903. All rights reserved.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

@@ -65,6 +65,12 @@ struct NamingPaperApp: App {
             }
         }
         .commands {
+            CommandGroup(replacing: .appInfo) {
+                Button("About NamingPaper") {
+                    AboutWindowController.shared.show()
+                }
+            }
+
             CommandGroup(replacing: .newItem) {
                 Button("Add Papers...") {
                     libraryViewModel?.showFilePicker = true
