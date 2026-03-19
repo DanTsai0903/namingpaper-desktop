@@ -40,6 +40,7 @@ class AddPaperViewModel {
             options.selectedSavedProviderID = active.id
             options.provider = active.provider
             options.model = active.model
+            options.ocrModel = active.ocrModel
         } else if !activeProvider.isEmpty {
             options.provider = activeProvider
         }
@@ -84,6 +85,7 @@ class AddPaperViewModel {
                     path: items[index].url.path,
                     provider: options.provider.isEmpty ? nil : options.provider,
                     model: options.model.isEmpty ? nil : options.model,
+                    ocrModel: options.ocrModel.isEmpty ? nil : options.ocrModel,
                     template: options.template,
                     noRename: !options.renameFile,
                     reasoning: options.reasoning ? true : nil
@@ -171,6 +173,7 @@ class AddPaperViewModel {
                     path: items[nextIndex].url.path,
                     provider: options.provider.isEmpty ? nil : options.provider,
                     model: options.model.isEmpty ? nil : options.model,
+                    ocrModel: options.ocrModel.isEmpty ? nil : options.ocrModel,
                     category: result.editedCategory,
                     template: options.template,
                     filename: options.renameFile ? result.editedName : nil,

@@ -2,7 +2,7 @@ import Foundation
 import SQLite3
 
 enum PaperSortOrder: String {
-    case title, year, authors, createdAt
+    case title, year, authors, journal, createdAt
 }
 
 actor DatabaseService {
@@ -83,6 +83,7 @@ actor DatabaseService {
         case .title: orderClause = "title COLLATE NOCASE \(dir)"
         case .year: orderClause = "year \(dir)"
         case .authors: orderClause = "authors COLLATE NOCASE \(dir)"
+        case .journal: orderClause = "journal COLLATE NOCASE \(dir)"
         case .createdAt: orderClause = "created_at \(dir)"
         }
 

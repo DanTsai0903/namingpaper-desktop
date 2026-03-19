@@ -24,8 +24,8 @@ def _chat_response(content: str) -> dict:
 class TestoMLXProviderDefaults:
     def test_default_values(self):
         p = oMLXProvider()
-        assert p.text_model == "mlx-community/Qwen3-8B-4bit"
-        assert p.ocr_model == "mlx-community/Qwen2.5-VL-7B-Instruct-4bit"
+        assert p.text_model == "mlx-community/Qwen3.5-9B-MLX-4bit"
+        assert p.ocr_model == "mlx-community/DeepSeek-OCR-8bit"
         assert p.base_url == "http://localhost:8000"
 
     def test_custom_values(self):
@@ -168,7 +168,7 @@ class TestoMLXReasoning:
     def test_reasoning_default_disables_thinking(self):
         provider = oMLXProvider()
         payload = provider._build_payload(
-            "mlx-community/Qwen3-8B-4bit",
+            "mlx-community/Qwen3.5-9B-MLX-4bit",
             [{"role": "user", "content": "test"}],
         )
         assert payload["chat_template_kwargs"]["enable_thinking"] is False
@@ -176,7 +176,7 @@ class TestoMLXReasoning:
     def test_reasoning_none_disables_thinking(self):
         provider = oMLXProvider(reasoning=None)
         payload = provider._build_payload(
-            "mlx-community/Qwen3-8B-4bit",
+            "mlx-community/Qwen3.5-9B-MLX-4bit",
             [{"role": "user", "content": "test"}],
         )
         assert payload["chat_template_kwargs"]["enable_thinking"] is False
@@ -184,7 +184,7 @@ class TestoMLXReasoning:
     def test_reasoning_true_enables_thinking(self):
         provider = oMLXProvider(reasoning=True)
         payload = provider._build_payload(
-            "mlx-community/Qwen3-8B-4bit",
+            "mlx-community/Qwen3.5-9B-MLX-4bit",
             [{"role": "user", "content": "test"}],
         )
         assert "chat_template_kwargs" not in payload
@@ -210,7 +210,7 @@ class TestGetProvideroMLX:
         provider = get_provider("omlx")
         assert isinstance(provider, oMLXProvider)
         assert provider.base_url == "http://localhost:8000"
-        assert provider.text_model == "mlx-community/Qwen3-8B-4bit"
+        assert provider.text_model == "mlx-community/Qwen3.5-9B-MLX-4bit"
 
         reset_settings()
 

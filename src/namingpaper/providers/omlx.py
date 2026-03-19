@@ -17,8 +17,8 @@ class oMLXProvider(AIProvider):
     Supports a two-stage pipeline: VLM OCR + text model for metadata parsing.
     """
 
-    DEFAULT_TEXT_MODEL = "mlx-community/Qwen3-8B-4bit"
-    DEFAULT_OCR_MODEL = "mlx-community/Qwen2.5-VL-7B-Instruct-4bit"
+    DEFAULT_TEXT_MODEL = "mlx-community/Qwen3.5-9B-MLX-4bit"
+    DEFAULT_OCR_MODEL = "mlx-community/DeepSeek-OCR-8bit"
     DEFAULT_BASE_URL = "http://localhost:8000"
 
     def __init__(
@@ -43,10 +43,28 @@ class oMLXProvider(AIProvider):
         return self._client
 
     async def aclose(self) -> None:
-        """Close the underlying HTTP client."""
+        """Unload models and close the underlying HTTP client."""
         if self._client is not None and not self._client.is_closed:
+            await self._unload_models()
             await self._client.aclose()
             self._client = None
+
+    async def _unload_models(self) -> None:
+        """Tell oMLX to unload models from memory."""
+        client = self._get_client()
+        headers = {}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        for model in {self.text_model, self.ocr_model}:
+            # oMLX uses the short model name (last path component) in URLs
+            short_name = model.rsplit("/", 1)[-1]
+            try:
+                await client.post(
+                    f"{self.base_url}/v1/models/{short_name}/unload",
+                    headers=headers,
+                )
+            except httpx.HTTPError:
+                pass
 
     async def __aenter__(self) -> "oMLXProvider":
         return self

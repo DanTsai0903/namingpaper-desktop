@@ -4,6 +4,7 @@ struct PaperListView: View {
     @Environment(LibraryViewModel.self) var viewModel
     @Environment(TabManager.self) var tabManager
     @State private var sortOrder = [KeyPathComparator(\Paper.title)]
+    @SceneStorage("paperTableColumns_v2") private var columnCustomization: TableColumnCustomization<Paper>
 
     /// Direct child subcategories of the currently selected category.
     private var childCategories: [CategoryNode] {
@@ -75,42 +76,8 @@ struct PaperListView: View {
             }
 
             // Paper table
-            Table(directPapers, selection: $viewModel.selectedPaperID, sortOrder: $sortOrder) {
-                TableColumn("Title", value: \.title) { paper in
-                    HStack(spacing: 4) {
-                        PaperRowView(
-                            paper: paper,
-                            isStarred: viewModel.isStarred(paper.id),
-                            highlightTerms: searchTerms
-                        ) {
-                            viewModel.toggleStar(paperID: paper.id)
-                        }
-                        .opacity(viewModel.newlyAddedIDs.contains(paper.id) ? 0.6 : 1.0)
-                        .animation(.easeIn(duration: 0.5), value: viewModel.newlyAddedIDs.contains(paper.id))
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        viewModel.selectedPaperID = paper.id
-                    }
-                    .onDrag { paper.dragItemProvider }
-                }
-                .width(min: 200)
-
-                TableColumn("Authors", value: \.authors) { paper in
-                    if searchTerms.isEmpty {
-                        Text(paper.authorsDisplay)
-                    } else {
-                        Text(highlightedText(paper.authorsDisplay, terms: searchTerms))
-                    }
-                }
-                .width(min: 100, ideal: 150)
-
-                TableColumn("Year", value: \.yearString)
-                    .width(50)
-
-                TableColumn("Journal", value: \.journal)
-                    .width(min: 80, ideal: 120)
-            }
+            paperTable
+                .background(TableConfigurator())
         }
         .navigationTitle(panelTitle)
         .onChange(of: viewModel.selectedPaperID) { _, newID in
@@ -128,10 +95,60 @@ struct PaperListView: View {
                 case \Paper.title: viewModel.changeSort(.title)
                 case \Paper.authors: viewModel.changeSort(.authors)
                 case \Paper.yearString: viewModel.changeSort(.year)
-                case \Paper.journal: viewModel.changeSort(.title)
+                case \Paper.journal: viewModel.changeSort(.journal)
+                case \Paper.journalAbbrev: viewModel.changeSort(.journal)
                 default: viewModel.changeSort(.title)
                 }
             }
+        }
+    }
+
+    private var paperTable: some View {
+        @Bindable var viewModel = viewModel
+        return Table(directPapers, selection: $viewModel.selectedPaperID, sortOrder: $sortOrder, columnCustomization: $columnCustomization) {
+            TableColumn("Title", value: \Paper.title) { paper in
+                HStack(spacing: 4) {
+                    PaperRowView(
+                        paper: paper,
+                        isStarred: viewModel.isStarred(paper.id),
+                        highlightTerms: searchTerms
+                    ) {
+                        viewModel.toggleStar(paperID: paper.id)
+                    }
+                    .opacity(viewModel.newlyAddedIDs.contains(paper.id) ? 0.6 : 1.0)
+                    .animation(.easeIn(duration: 0.5), value: viewModel.newlyAddedIDs.contains(paper.id))
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    viewModel.selectedPaperID = paper.id
+                }
+                .onDrag { paper.dragItemProvider }
+            }
+            .width(min: 200)
+            .disabledCustomizationBehavior(.visibility)
+
+            TableColumn("Authors", value: \Paper.authors) { paper in
+                if searchTerms.isEmpty {
+                    Text(paper.authorsDisplay)
+                } else {
+                    Text(highlightedText(paper.authorsDisplay, terms: searchTerms))
+                }
+            }
+            .width(min: 100, ideal: 150)
+            .customizationID("authors")
+
+            TableColumn("Year", value: \Paper.yearString)
+                .width(min: 40, ideal: 50)
+                .customizationID("year")
+
+            TableColumn("Journal", value: \Paper.journal)
+                .width(min: 80, ideal: 120)
+                .customizationID("journal")
+
+            TableColumn("Journal (Abbrev)", value: \Paper.journalAbbrev)
+                .width(min: 60, ideal: 100)
+                .customizationID("journalAbbrev")
+                .defaultVisibility(.hidden)
         }
     }
 
@@ -168,6 +185,46 @@ struct PaperListView: View {
             }
         }
         return attributed
+    }
+}
+
+/// Finds the underlying NSTableView and configures auto-resizing so columns
+/// redistribute space when a column is shown or hidden.
+private struct TableConfigurator: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async {
+            guard let tableView = Self.findTableView(from: view) else { return }
+            tableView.columnAutoresizingStyle = .lastColumnOnlyAutoresizingStyle
+            tableView.sizeToFit()
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async {
+            guard let tableView = Self.findTableView(from: nsView) else { return }
+            tableView.sizeToFit()
+        }
+    }
+
+    private static func findTableView(from view: NSView) -> NSTableView? {
+        var current = view.superview
+        while let parent = current {
+            if let found = findDescendant(of: parent, type: NSTableView.self) {
+                return found
+            }
+            current = parent.superview
+        }
+        return nil
+    }
+
+    private static func findDescendant<T: NSView>(of view: NSView, type: T.Type) -> T? {
+        if let match = view as? T { return match }
+        for subview in view.subviews {
+            if let found = findDescendant(of: subview, type: type) { return found }
+        }
+        return nil
     }
 }
 

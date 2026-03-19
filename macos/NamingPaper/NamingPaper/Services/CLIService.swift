@@ -30,6 +30,7 @@ struct AddPaperResult {
     var authors: String
     var year: String
     var journal: String
+    var journalFull: String
     var confidence: Double?
     /// Cached JSON metadata from dry-run to pass on commit (avoids re-extraction)
     var cachedMetadataJSON: String?
@@ -43,6 +44,7 @@ struct AddPaperResult {
         self.authors = dryRun.authors
         self.year = dryRun.year
         self.journal = dryRun.journal
+        self.journalFull = dryRun.journal
         self.confidence = nil
     }
 
@@ -54,7 +56,8 @@ struct AddPaperResult {
         self.title = paper.title
         self.authors = paper.authors.joined(separator: ", ")
         self.year = String(paper.year)
-        self.journal = paper.journal
+        self.journal = paper.journalAbbrev ?? paper.journal
+        self.journalFull = paper.journal
         self.confidence = paper.confidence
 
         // Build the cached metadata JSON using Codable for type safety
@@ -102,6 +105,7 @@ struct AddPaperOptions {
     var selectedSavedProviderID: UUID?
     var provider: String = ""
     var model: String = ""
+    var ocrModel: String = ""
     var template: String = ConfigService.shared.readConfig().template
     var categoryPriority: Bool = false
     var reasoning: Bool = false
@@ -253,6 +257,7 @@ actor CLIService {
         path: String,
         provider: String? = nil,
         model: String? = nil,
+        ocrModel: String? = nil,
         category: String? = nil,
         template: String? = nil,
         filename: String? = nil,
@@ -266,6 +271,9 @@ actor CLIService {
         }
         if let model, !model.isEmpty {
             args += ["--model", model]
+        }
+        if let ocrModel, !ocrModel.isEmpty {
+            args += ["--ocr-model", ocrModel]
         }
         if let category, !category.isEmpty {
             args += ["--category", category]
@@ -304,6 +312,7 @@ actor CLIService {
         path: String,
         provider: String? = nil,
         model: String? = nil,
+        ocrModel: String? = nil,
         template: String? = nil,
         noRename: Bool = false,
         reasoning: Bool? = nil
@@ -314,6 +323,9 @@ actor CLIService {
         }
         if let model, !model.isEmpty {
             args += ["--model", model]
+        }
+        if let ocrModel, !ocrModel.isEmpty {
+            args += ["--ocr-model", ocrModel]
         }
         if let template, !template.isEmpty {
             args += ["--template", template]

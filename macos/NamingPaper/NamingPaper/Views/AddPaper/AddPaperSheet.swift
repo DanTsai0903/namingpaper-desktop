@@ -102,12 +102,14 @@ struct AddPaperSheet: View {
                     if let id = newID, let sp = savedProviders.first(where: { $0.id == id }) {
                         addVM.options.provider = sp.provider
                         addVM.options.model = sp.model
+                        addVM.options.ocrModel = sp.ocrModel
                         // Set the API key for the CLI via Keychain
                         let config = ConfigService.shared.readConfig()
                         KeychainService.save(key: sp.apiKey, account: config.apiKeyTOMLName)
                     } else {
                         addVM.options.provider = ""
                         addVM.options.model = ""
+                        addVM.options.ocrModel = ""
                     }
                 }
 

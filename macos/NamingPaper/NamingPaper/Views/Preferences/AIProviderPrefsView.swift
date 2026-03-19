@@ -5,6 +5,7 @@ struct SavedProvider: Identifiable, Codable, Hashable {
     var name: String
     var provider: String
     var model: String
+    var ocrModel: String = ""
 
     // API key stored in Keychain, not serialized to UserDefaults
     var apiKey: String {
@@ -12,8 +13,13 @@ struct SavedProvider: Identifiable, Codable, Hashable {
         set { KeychainService.save(key: newValue, account: id.uuidString) }
     }
 
+    /// Whether this provider uses a two-stage OCR + text pipeline
+    var hasTwoStagePipeline: Bool {
+        provider == "ollama" || provider == "omlx"
+    }
+
     enum CodingKeys: String, CodingKey {
-        case id, name, provider, model
+        case id, name, provider, model, ocrModel
     }
 }
 
@@ -27,6 +33,7 @@ struct AIProviderPrefsView: View {
     @State private var editName: String = ""
     @State private var editProvider: String = "ollama"
     @State private var editModel: String = ""
+    @State private var editOCRModel: String = ""
     @State private var editApiKey: String = ""
     @State private var saveConfirmation: Bool = false
     @State private var nameCollisionWarning: Bool = false
@@ -126,6 +133,11 @@ struct AIProviderPrefsView: View {
 
                     TextField("Model Name", text: $editModel, prompt: Text("Default"))
                         .textFieldStyle(.roundedBorder)
+
+                    if editProvider == "ollama" || editProvider == "omlx" {
+                        TextField("OCR Model", text: $editOCRModel, prompt: Text("Default"))
+                            .textFieldStyle(.roundedBorder)
+                    }
                 }
 
                 Section("API Key") {
@@ -174,6 +186,7 @@ struct AIProviderPrefsView: View {
                 editName = item.name
                 editProvider = item.provider
                 editModel = item.model
+                editOCRModel = item.ocrModel
                 editApiKey = item.apiKey
             }
         }
@@ -252,6 +265,7 @@ struct AIProviderPrefsView: View {
         savedProviders[idx].name = trimmedName.isEmpty ? nextUniqueName() : trimmedName
         savedProviders[idx].provider = editProvider
         savedProviders[idx].model = editModel
+        savedProviders[idx].ocrModel = editOCRModel
         savedProviders[idx].apiKey = editApiKey
         persistSavedProviders()
     }
