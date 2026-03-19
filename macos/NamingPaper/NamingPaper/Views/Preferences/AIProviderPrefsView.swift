@@ -137,13 +137,14 @@ struct AIProviderPrefsView: View {
                     if editProvider == "ollama" || editProvider == "omlx" {
                         TextField("OCR Model", text: $editOCRModel, prompt: Text(defaultOCRModelName))
                             .textFieldStyle(.roundedBorder)
-                        Text("Used only when the PDF has no extractable text (e.g. scanned documents)")
+                        Text("Used only when the PDF has no extractable text")
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
 
-                Section("API Key") {
+                Section {
                     SecureField("API Key", text: $editApiKey, prompt: Text(apiKeyPlaceholder))
                         .textFieldStyle(.roundedBorder)
 
@@ -213,8 +214,8 @@ struct AIProviderPrefsView: View {
 
     private var apiKeyPlaceholder: String {
         switch editProvider {
-        case "ollama": return "Not required for ollama"
-        case "omlx": return "Optional — only if oMLX has --api-key set"
+        case "ollama": return "Optional"
+        case "omlx": return "Optional"
         default: return "Enter \(providerDisplayName(editProvider)) API key"
         }
     }
