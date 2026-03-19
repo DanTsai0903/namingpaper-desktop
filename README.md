@@ -37,7 +37,17 @@ On first launch, macOS will block the app because it is not notarized. To open i
 2. Select **Open** from the context menu
 3. Click **Open** in the dialog that appears
 
-You only need to do this once. Alternatively, build from source by opening `macos/NamingPaper/NamingPaper.xcodeproj` in Xcode.
+You only need to do this once.
+
+**If you still can't open the app**, go to **System Settings → Privacy & Security**, scroll down, and click **Open Anyway** next to the NamingPaper message. If no message appears, try launching the app once more so macOS registers the attempt.
+
+As a last resort, you can remove the quarantine flag from the terminal:
+
+```bash
+xattr -d com.apple.quarantine /Applications/NamingPaper.app
+```
+
+You can also build from source by opening `macos/NamingPaper/NamingPaper.xcodeproj` in Xcode.
 
 ## Quick Start
 
