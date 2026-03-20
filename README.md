@@ -3,7 +3,7 @@
 AI-powered academic PDF renamer with a native macOS app and paper library.
 
 **Before:** `1-s2.0-S0304405X13000044-main.pdf`
-**After:** `Fama and French, (1993, JFE), Common risk factors in the returns....pdf`
+**After:** `Fama and French, (1993, JFE), Common risk factors in the returns on stocks and bonds.pdf`
 
 ## What's in this project
 
@@ -29,7 +29,7 @@ uv tool install "namingpaper[gemini] @ git+https://github.com/DanTsai0903/naming
 
 ### macOS App
 
-Download `NamingPaper.dmg` from the [latest GitHub release](https://github.com/DanTsai0903/namingpaper-desktop/releases/latest), open it, and drag **NamingPaper.app** to your Applications folder.
+Download `NamingPaper.dmg` from the [latest GitHub release](https://github.com/DanTsai0903/namingpaper-desktop/releases/latest), open it, and drag **NamingPaper.app** to your Applications folder. The app includes automatic updates — you'll be notified when a new version is available.
 
 On first launch, macOS will block the app because it is not notarized. To open it:
 
@@ -51,9 +51,19 @@ You can also build from source by opening `macos/NamingPaper/NamingPaper.xcodepr
 
 ## Quick Start
 
-### CLI
+### CLI Quick Start
 
-The default provider is Ollama (local, no API key needed). Install from [ollama.com](https://ollama.com), then:
+The default provider is ollama (local, no API key needed). Install from [ollama.com](https://ollama.com). Another local option is [oMLX](https://github.com/jundot/omlx) for Apple Silicon Macs.
+
+Default models by provider:
+
+| Provider | Text Model | OCR Model |
+| -------- | ---------- | --------- |
+| ollama | `qwen3:8b` | `deepseek-ocr` |
+| oMLX | `Qwen3.5-9B-MLX-4bit` | `DeepSeek-OCR-8bit` |
+| Claude | `claude-sonnet-4-20250514` | — |
+| OpenAI | `gpt-4o` | — |
+| Gemini | `gemini-2.0-flash` | — |
 
 ```bash
 ollama pull qwen3:8b
@@ -75,7 +85,7 @@ export NAMINGPAPER_ANTHROPIC_API_KEY=sk-ant-...
 namingpaper rename paper.pdf -p claude --execute
 ```
 
-### macOS App
+### macOS App Quick Start
 
 The app wraps the CLI and adds a visual paper library. Add papers, browse by category, search metadata, and preview PDFs — all from a native interface.
 
@@ -113,10 +123,10 @@ Papers are organized into `~/Papers/` (configurable via `NAMINGPAPER_PAPERS_DIR`
 Rename a single PDF.
 
 | Option | Description |
-|--------|-------------|
+| ------ | ----------- |
 | `-x, --execute` | Actually rename (default is dry-run) |
 | `-y, --yes` | Skip confirmation |
-| `-p, --provider` | AI provider: `ollama`, `claude`, `openai`, `gemini` |
+| `-p, --provider` | AI provider: `ollama`, `omlx`, `claude`, `openai`, `gemini` |
 | `-m, --model` | Override default model |
 | `--ocr-model` | Override Ollama OCR model |
 | `-t, --template` | Filename template or preset |
@@ -130,7 +140,7 @@ Rename all PDFs in a directory.
 Same options as `rename`, plus:
 
 | Option | Description |
-|--------|-------------|
+| ------ | ----------- |
 | `-r, --recursive` | Scan subdirectories |
 | `-f, --filter` | Glob pattern filter |
 | `--parallel N` | Concurrent extractions |
@@ -149,7 +159,7 @@ namingpaper uninstall --execute --yes [--purge]
 ## Filename Templates
 
 | Preset | Pattern | Example |
-|--------|---------|---------|
+| ------ | ------- | ------- |
 | `default` | `{authors}, ({year}, {journal}), {title}` | `Fama and French, (1993, JFE), Common risk....pdf` |
 | `compact` | `{authors} ({year}) {title}` | `Fama and French (1993) Common risk....pdf` |
 | `full` | `{authors}, ({year}, {journal_full}), {title}` | Uses full journal name |
@@ -160,9 +170,9 @@ Placeholders: `{authors}`, `{authors_full}`, `{authors_abbrev}`, `{year}`, `{jou
 ## AI Providers
 
 | Provider | Setup | Notes |
-|----------|-------|-------|
+| -------- | ----- | ----- |
 | **Ollama** (default) | `ollama pull qwen3:8b` | Local, no API key |
-| **oMLX** | Apple Silicon Mac | Local MLX inference |
+| **oMLX** | `brew services start omlx` | Apple Silicon only, local MLX inference |
 | **Claude** | `NAMINGPAPER_ANTHROPIC_API_KEY` | |
 | **OpenAI** | `NAMINGPAPER_OPENAI_API_KEY` | Requires `namingpaper[openai]` |
 | **Gemini** | `NAMINGPAPER_GEMINI_API_KEY` | Requires `namingpaper[gemini]` |
