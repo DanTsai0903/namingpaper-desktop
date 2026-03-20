@@ -39,20 +39,6 @@ struct SidebarView: View {
                 SearchSidebarView()
             }
 
-            Divider()
-
-            HStack {
-                Button {
-                    viewModel.showFilePicker = true
-                } label: {
-                    Image(systemName: "plus")
-                }
-                .buttonStyle(.plain)
-                .help("Add Papers (⌘O)")
-
-                Spacer()
-            }
-            .padding(8)
         }
         .frame(minWidth: 180)
     }

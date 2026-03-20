@@ -93,8 +93,10 @@ class AddPaperViewModel {
                 await MainActor.run {
                     // Try JSON parsing first, fall back to Rich table parsing
                     var paperResult: AddPaperResult?
+                    let jsonResult = CLIService.parseJSONOutput(cliResult.stdout)
+
                     if cliResult.success,
-                       let jsonResult = CLIService.parseJSONOutput(cliResult.stdout),
+                       let jsonResult,
                        jsonResult.status == "ok",
                        let paper = jsonResult.paper {
                         paperResult = AddPaperResult(from: paper)
@@ -123,17 +125,10 @@ class AddPaperViewModel {
                         items[index].stage = .done
                     } else {
                         items[index].stage = .failed
-                        // Check for JSON error response
-                        if let jsonResult = CLIService.parseJSONOutput(cliResult.stdout),
-                           let error = jsonResult.error {
-                            items[index].error = error
-                        } else {
-                            let errorMsg = [cliResult.stderr, cliResult.stdout]
-                                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                                .filter { !$0.isEmpty }
-                                .joined(separator: "\n")
-                            items[index].error = errorMsg.isEmpty ? "Unknown error" : errorMsg
-                        }
+                        items[index].error = Self.friendlyError(
+                            jsonResult: jsonResult,
+                            cliResult: cliResult
+                        )
                     }
                 }
             } catch {
@@ -202,6 +197,45 @@ class AddPaperViewModel {
 
             commitNext(index: nextIndex + 1)
         }
+    }
+
+    // MARK: - Error Messages
+
+    private static func friendlyError(
+        jsonResult: CLIService.AddPaperJSONResult?,
+        cliResult: CLIResult
+    ) -> String {
+        // 1. Duplicate paper
+        if let jsonResult, jsonResult.status == "skipped" {
+            return "This paper is already in your library."
+        }
+
+        // 2. JSON error from CLI (e.g. unrecognized PDF)
+        if let jsonResult, let error = jsonResult.error {
+            if error.lowercased().contains("confidence") || error.lowercased().contains("not") && error.lowercased().contains("academic") {
+                return "Could not recognize this PDF as an academic paper. It may not contain extractable metadata."
+            }
+            return error
+        }
+
+        // 3. Provider connectivity issues
+        let combined = "\(cliResult.stderr)\n\(cliResult.stdout)".lowercased()
+        if combined.contains("connection") || combined.contains("refused") || combined.contains("connect") {
+            return "Could not connect to the AI provider. Make sure Ollama or your configured provider is running."
+        }
+        if combined.contains("not found") && (combined.contains("model") || combined.contains("ollama")) {
+            return "The AI model was not found. Make sure the required model is installed in your provider."
+        }
+        if combined.contains("api") && (combined.contains("key") || combined.contains("auth") || combined.contains("401") || combined.contains("403")) {
+            return "Authentication failed. Check your API key in the AI Provider settings."
+        }
+
+        // Fallback
+        let errorMsg = [cliResult.stderr, cliResult.stdout]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n")
+        return errorMsg.isEmpty ? "An unknown error occurred." : errorMsg
     }
 
     func reset() {

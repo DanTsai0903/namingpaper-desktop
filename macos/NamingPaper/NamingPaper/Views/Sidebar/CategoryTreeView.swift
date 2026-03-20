@@ -58,6 +58,15 @@ struct CategoryTreeView: View {
                         : nil
                 )
                 .foregroundStyle(viewModel.selectedCategory == nil ? .white : .primary)
+
+                Button {
+                    viewModel.showFilePicker = true
+                } label: {
+                    Label("Add Paper", systemImage: "plus")
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .help("Add Papers (⌘O)")
             }
 
             // Categories
