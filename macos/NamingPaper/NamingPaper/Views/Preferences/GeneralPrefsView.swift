@@ -2,6 +2,8 @@ import SwiftUI
 
 struct GeneralPrefsView: View {
     @AppStorage("appearance") private var appearance: String = "system"
+    @AppStorage("authorDisplay") private var authorDisplay: String = "last"
+    @AppStorage("journalDisplay") private var journalDisplay: String = "full"
     @State private var papersDir: String = ""
     @State private var showMigratePicker = false
     @State private var isMigrating = false
@@ -37,6 +39,18 @@ struct GeneralPrefsView: View {
                     Text(migrationError)
                         .foregroundStyle(.red)
                         .font(.caption)
+                }
+            }
+
+            Section("Display") {
+                Picker("Authors Column", selection: $authorDisplay) {
+                    Text("Last Name").tag("last")
+                    Text("Full Name").tag("full")
+                }
+
+                Picker("Journal Column", selection: $journalDisplay) {
+                    Text("Full Name").tag("full")
+                    Text("Abbreviation").tag("abbrev")
                 }
             }
 

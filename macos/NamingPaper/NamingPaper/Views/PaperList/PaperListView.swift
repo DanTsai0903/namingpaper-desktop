@@ -5,6 +5,8 @@ struct PaperListView: View {
     @Environment(TabManager.self) var tabManager
     @State private var sortOrder = [KeyPathComparator(\Paper.title)]
     @SceneStorage("paperTableColumns_v2") private var columnCustomization: TableColumnCustomization<Paper>
+    @AppStorage("authorDisplay") private var authorDisplay: String = "last"
+    @AppStorage("journalDisplay") private var journalDisplay: String = "full"
 
     /// Direct child subcategories of the currently selected category.
     private var childCategories: [CategoryNode] {
@@ -96,7 +98,6 @@ struct PaperListView: View {
                 case \Paper.authors: viewModel.changeSort(.authors)
                 case \Paper.yearString: viewModel.changeSort(.year)
                 case \Paper.journal: viewModel.changeSort(.journal)
-                case \Paper.journalAbbrev: viewModel.changeSort(.journal)
                 case \Paper.createdAt: viewModel.changeSort(.createdAt)
                 default: viewModel.changeSort(.title)
                 }
@@ -129,10 +130,13 @@ struct PaperListView: View {
             .disabledCustomizationBehavior(.visibility)
 
             TableColumn("Authors", value: \Paper.authors) { paper in
+                let preferred = authorDisplay == "full" ? paper.authorsAllDisplay : paper.authorsDisplay
+                let fallback = authorDisplay == "full" ? paper.authorsDisplay : paper.authorsAllDisplay
+                let display = preferred.isEmpty ? fallback : preferred
                 if searchTerms.isEmpty {
-                    Text(paper.authorsDisplay)
+                    Text(display)
                 } else {
-                    Text(highlightedText(paper.authorsDisplay, terms: searchTerms))
+                    Text(highlightedText(display, terms: searchTerms))
                 }
             }
             .width(min: 100, ideal: 150)
@@ -142,14 +146,14 @@ struct PaperListView: View {
                 .width(min: 40, ideal: 50)
                 .customizationID("year")
 
-            TableColumn("Journal", value: \Paper.journal)
-                .width(min: 80, ideal: 120)
-                .customizationID("journal")
-
-            TableColumn("Journal (Abbrev)", value: \Paper.journalAbbrev)
-                .width(min: 60, ideal: 100)
-                .customizationID("journalAbbrev")
-                .defaultVisibility(.hidden)
+            TableColumn("Journal", value: \Paper.journal) { paper in
+                let preferred = journalDisplay == "abbrev" ? paper.journalAbbrev : paper.journal
+                let fallback = journalDisplay == "abbrev" ? paper.journal : paper.journalAbbrev
+                let display = preferred.isEmpty ? fallback : preferred
+                Text(display)
+            }
+            .width(min: 80, ideal: 120)
+            .customizationID("journal")
 
             TableColumn("Date Added", value: \Paper.createdAt) { paper in
                 Text(paper.dateAddedDisplay)
