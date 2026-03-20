@@ -4,13 +4,13 @@ version = "0.2.7"
 description = "CLI tool to rename, organize, and search academic papers using AI-extracted metadata"
 readme = "README.md"
 requires-python = ">=3.11"
-license = {text = "MIT"}
+license = {text = "Apache-2.0"}
 authors = [{name = "DanTsai0903"}]
 keywords = ["pdf", "academic", "papers", "rename", "metadata", "ai", "cli", "library", "search", "organize"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
