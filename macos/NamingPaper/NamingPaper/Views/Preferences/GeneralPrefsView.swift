@@ -52,6 +52,10 @@ struct GeneralPrefsView: View {
                     Text("Full Name").tag("full")
                     Text("Abbreviation").tag("abbrev")
                 }
+
+                Text("Falls back to the other format when the preferred one is not available for a paper.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section {

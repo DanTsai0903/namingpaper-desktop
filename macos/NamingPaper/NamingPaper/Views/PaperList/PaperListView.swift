@@ -162,6 +162,7 @@ struct PaperListView: View {
             .customizationID("dateAdded")
             .defaultVisibility(.hidden)
         }
+        .id("\(authorDisplay)-\(journalDisplay)")
     }
 
     /// Find a node by its full path in the tree.
