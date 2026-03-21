@@ -252,6 +252,7 @@ struct AddPaperSheet: View {
     private func reviewRow(item: Binding<AddPaperItem>) -> some View {
         let addVM = viewModel.addPaperViewModel
         let currentItem = item.wrappedValue
+        let itemID = currentItem.id
 
         VStack(alignment: .leading, spacing: 6) {
             if let result = currentItem.result {
@@ -275,8 +276,12 @@ struct AddPaperSheet: View {
                 // Editable name
                 if addVM.options.renameFile {
                     TextField("Filename", text: Binding(
-                        get: { item.wrappedValue.result?.editedName ?? result.editedName },
-                        set: { item.wrappedValue.result?.editedName = $0 }
+                        get: { addVM.items.first(where: { $0.id == itemID })?.result?.editedName ?? result.editedName },
+                        set: { newValue in
+                            if let idx = addVM.items.firstIndex(where: { $0.id == itemID }) {
+                                addVM.items[idx].result?.editedName = newValue
+                            }
+                        }
                     ))
                     .textFieldStyle(.roundedBorder)
                 } else {
@@ -291,8 +296,12 @@ struct AddPaperSheet: View {
                         .font(.caption)
 
                     TextField("Category", text: Binding(
-                        get: { item.wrappedValue.result?.editedCategory ?? result.editedCategory },
-                        set: { item.wrappedValue.result?.editedCategory = $0 }
+                        get: { addVM.items.first(where: { $0.id == itemID })?.result?.editedCategory ?? result.editedCategory },
+                        set: { newValue in
+                            if let idx = addVM.items.firstIndex(where: { $0.id == itemID }) {
+                                addVM.items[idx].result?.editedCategory = newValue
+                            }
+                        }
                     ))
                     .textFieldStyle(.roundedBorder)
                     .font(.callout)
@@ -301,7 +310,9 @@ struct AddPaperSheet: View {
                     Menu {
                         ForEach(categories, id: \.self) { cat in
                             Button(cat) {
-                                item.wrappedValue.result?.editedCategory = cat
+                                if let idx = addVM.items.firstIndex(where: { $0.id == itemID }) {
+                                    addVM.items[idx].result?.editedCategory = cat
+                                }
                             }
                         }
                     } label: {
