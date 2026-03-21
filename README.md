@@ -1,5 +1,7 @@
 # namingpaper
 
+[繁體中文](README.zh-Hant.md)
+
 AI-powered academic PDF renamer with a native macOS app and paper library.
 
 **Before:** `1-s2.0-S0304405X13000044-main.pdf`
