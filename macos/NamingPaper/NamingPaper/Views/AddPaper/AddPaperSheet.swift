@@ -92,7 +92,6 @@ struct AddPaperSheet: View {
             // Options
             Form {
                 Picker("Model", selection: $addVM.options.selectedSavedProviderID) {
-                    Text("Default").tag(UUID?.none)
                     ForEach(savedProviders) { sp in
                         Text("\(sp.name) (\(providerDisplayName(sp.provider)))")
                             .tag(UUID?.some(sp.id))
