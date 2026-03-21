@@ -7,6 +7,7 @@ struct AppConfig {
     var apiKey: String
     var cliPath: String
     var template: String
+    var baseURL: String
 
     /// The TOML key name for the API key based on provider
     var apiKeyTOMLName: String {
@@ -15,7 +16,18 @@ struct AppConfig {
         case "openai": return "openai_api_key"
         case "claude": return "anthropic_api_key"
         case "omlx": return "omlx_api_key"
+        case "lmstudio": return "lmstudio_api_key"
         default: return "api_key"
+        }
+    }
+
+    /// The TOML key name for the base URL based on provider
+    var baseURLTOMLName: String? {
+        switch provider {
+        case "ollama": return "ollama_base_url"
+        case "omlx": return "omlx_base_url"
+        case "lmstudio": return "lmstudio_base_url"
+        default: return nil
         }
     }
 
@@ -25,7 +37,8 @@ struct AppConfig {
         model: "",
         apiKey: "",
         cliPath: "",
-        template: "default"
+        template: "default",
+        baseURL: ""
     )
 }
 
@@ -74,7 +87,11 @@ class ConfigService {
     // MARK: - Minimal TOML Parser
 
     private let apiKeyNames: Set<String> = [
-        "api_key", "gemini_api_key", "openai_api_key", "anthropic_api_key", "claude_api_key", "omlx_api_key"
+        "api_key", "gemini_api_key", "openai_api_key", "anthropic_api_key", "claude_api_key", "omlx_api_key", "lmstudio_api_key"
+    ]
+
+    private let baseURLNames: Set<String> = [
+        "ollama_base_url", "omlx_base_url", "lmstudio_base_url"
     ]
 
     private func parseTOML(_ content: String) -> AppConfig {
@@ -110,6 +127,8 @@ class ConfigService {
             case "template": config.template = value
             case _ where apiKeyNames.contains(fullKey):
                 config.apiKey = value
+            case _ where baseURLNames.contains(fullKey):
+                config.baseURL = value
             default: break
             }
         }
@@ -130,6 +149,9 @@ class ConfigService {
         }
         if !config.apiKey.isEmpty {
             lines.append("\(config.apiKeyTOMLName) = \"\(config.apiKey)\"")
+        }
+        if !config.baseURL.isEmpty, let key = config.baseURLTOMLName {
+            lines.append("\(key) = \"\(config.baseURL)\"")
         }
         if !config.template.isEmpty, config.template != "default" {
             lines.append("template = \"\(config.template)\"")
@@ -168,6 +190,13 @@ class ConfigService {
                     lines[i] = "# \(key) removed"
                 }
                 found.insert("api_key")
+            case _ where baseURLNames.contains(key):
+                if !config.baseURL.isEmpty, let tomlKey = config.baseURLTOMLName {
+                    lines[i] = "\(tomlKey) = \"\(config.baseURL)\""
+                } else {
+                    lines[i] = "# \(key) removed"
+                }
+                found.insert("base_url")
             default: break
             }
         }
@@ -184,6 +213,9 @@ class ConfigService {
         }
         if !found.contains("api_key"), !config.apiKey.isEmpty {
             lines.append("\(config.apiKeyTOMLName) = \"\(config.apiKey)\"")
+        }
+        if !found.contains("base_url"), !config.baseURL.isEmpty, let key = config.baseURLTOMLName {
+            lines.append("\(key) = \"\(config.baseURL)\"")
         }
         if !found.contains("template"), !config.template.isEmpty, config.template != "default" {
             lines.append("template = \"\(config.template)\"")

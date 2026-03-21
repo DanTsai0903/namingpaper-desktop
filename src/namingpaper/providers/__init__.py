@@ -104,5 +104,15 @@ def get_provider(
                 api_key=settings.omlx_api_key,
                 reasoning=reasoning,
             )
+        case "lmstudio":
+            model = model_name or settings.lmstudio_model or settings.model_name
+            from namingpaper.providers.lmstudio import LMStudioProvider
+
+            return LMStudioProvider(
+                model=model,
+                base_url=settings.lmstudio_base_url,
+                ocr_model=ocr_model or settings.lmstudio_ocr_model,
+                api_key=settings.lmstudio_api_key,
+            )
         case _:
             raise ValueError(f"Unknown provider: {name}")

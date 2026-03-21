@@ -6,6 +6,7 @@ struct SavedProvider: Identifiable, Codable, Hashable {
     var provider: String
     var model: String
     var ocrModel: String = ""
+    var baseURL: String = ""
 
     // API key stored in Keychain, not serialized to UserDefaults
     var apiKey: String {
@@ -15,11 +16,16 @@ struct SavedProvider: Identifiable, Codable, Hashable {
 
     /// Whether this provider uses a two-stage OCR + text pipeline
     var hasTwoStagePipeline: Bool {
-        provider == "ollama" || provider == "omlx"
+        provider == "ollama" || provider == "omlx" || provider == "lmstudio"
+    }
+
+    /// Whether this provider supports a configurable base URL
+    var hasBaseURL: Bool {
+        provider == "ollama" || provider == "omlx" || provider == "lmstudio"
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, name, provider, model, ocrModel
+        case id, name, provider, model, ocrModel, baseURL
     }
 }
 
@@ -34,16 +40,18 @@ struct AIProviderPrefsView: View {
     @State private var editProvider: String = "ollama"
     @State private var editModel: String = ""
     @State private var editOCRModel: String = ""
+    @State private var editBaseURL: String = ""
     @State private var editApiKey: String = ""
     @State private var saveConfirmation: Bool = false
     @State private var nameCollisionWarning: Bool = false
 
-    private let providers = ["ollama", "omlx", "claude", "openai", "gemini"]
+    private let providers = ["ollama", "omlx", "lmstudio", "claude", "openai", "gemini"]
 
     private func providerDisplayName(_ id: String) -> String {
         switch id {
         case "omlx": return "oMLX"
-        case "ollama": return "ollama"
+        case "ollama": return "Ollama"
+        case "lmstudio": return "LM Studio"
         default: return id.capitalized
         }
     }
@@ -134,13 +142,16 @@ struct AIProviderPrefsView: View {
                     TextField("Model Name", text: $editModel, prompt: Text(defaultModelName))
                         .textFieldStyle(.roundedBorder)
 
-                    if editProvider == "ollama" || editProvider == "omlx" {
+                    if editProvider == "ollama" || editProvider == "omlx" || editProvider == "lmstudio" {
                         TextField("OCR Model", text: $editOCRModel, prompt: Text(defaultOCRModelName))
                             .textFieldStyle(.roundedBorder)
                         Text("Used only when the PDF has no extractable text")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
+
+                        TextField("Base URL", text: $editBaseURL, prompt: Text(defaultBaseURL))
+                            .textFieldStyle(.roundedBorder)
                     }
                 }
 
@@ -191,6 +202,7 @@ struct AIProviderPrefsView: View {
                 editProvider = item.provider
                 editModel = item.model
                 editOCRModel = item.ocrModel
+                editBaseURL = item.baseURL
                 editApiKey = item.apiKey
             }
         }
@@ -199,7 +211,8 @@ struct AIProviderPrefsView: View {
     private var defaultModelName: String {
         switch editProvider {
         case "ollama": return "Default: qwen3:8b"
-        case "omlx": return "Default: Qwen3.5-9B-MLX-4bit"
+        case "omlx": return "Default: Qwen3.5-2B-MLX-4bit"
+        case "lmstudio": return "Default: qwen3.5-2b-optiq"
         default: return "Default"
         }
     }
@@ -208,7 +221,17 @@ struct AIProviderPrefsView: View {
         switch editProvider {
         case "ollama": return "Default: deepseek-ocr"
         case "omlx": return "Default: DeepSeek-OCR-8bit"
+        case "lmstudio": return "Optional (not set by default)"
         default: return "Default"
+        }
+    }
+
+    private var defaultBaseURL: String {
+        switch editProvider {
+        case "ollama": return "Default: http://localhost:11434"
+        case "omlx": return "Default: http://localhost:8000"
+        case "lmstudio": return "Default: http://localhost:1234"
+        default: return ""
         }
     }
 
@@ -216,6 +239,7 @@ struct AIProviderPrefsView: View {
         switch editProvider {
         case "ollama": return "Optional"
         case "omlx": return "Optional"
+        case "lmstudio": return "Optional"
         default: return "Enter \(providerDisplayName(editProvider)) API key"
         }
     }
@@ -267,10 +291,11 @@ struct AIProviderPrefsView: View {
     private func activate(_ item: SavedProvider) {
         activeProvider = item.provider
         activeModel = item.model
-        // Write provider/model to config.toml (no API key)
+        // Write provider/model/baseURL to config.toml (no API key)
         var config = ConfigService.shared.readConfig()
         config.provider = item.provider
         config.model = item.model
+        config.baseURL = item.baseURL
         config.apiKey = ""  // clear any existing key from config.toml
         try? ConfigService.shared.writeConfig(config)
         // Store API key in Keychain with well-known account so the CLI can read it
@@ -286,6 +311,7 @@ struct AIProviderPrefsView: View {
         savedProviders[idx].provider = editProvider
         savedProviders[idx].model = editModel
         savedProviders[idx].ocrModel = editOCRModel
+        savedProviders[idx].baseURL = editBaseURL
         savedProviders[idx].apiKey = editApiKey
         persistSavedProviders()
     }

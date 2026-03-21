@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = Field(default=None)
 
     # Provider selection
-    ai_provider: Literal["claude", "openai", "gemini", "ollama", "omlx"] = Field(
+    ai_provider: Literal["claude", "openai", "gemini", "ollama", "omlx", "lmstudio"] = Field(
         default="ollama", alias="provider"
     )
 
@@ -75,7 +75,20 @@ class Settings(BaseSettings):
     )
     omlx_model: str | None = Field(default=None, description="Text model for oMLX")
     omlx_ocr_model: str | None = Field(
-        default=None, description="Override OCR model for oMLX (default: mlx-community/Qwen2.5-VL-7B-Instruct-4bit)"
+        default=None, description="Override OCR model for oMLX (default: mlx-community/DeepSeek-OCR-8bit)"
+    )
+
+    # LM Studio settings
+    lmstudio_base_url: str = Field(
+        default="http://localhost:1234",
+        description="Base URL for LM Studio API",
+    )
+    lmstudio_model: str | None = Field(default=None, description="Text model for LM Studio")
+    lmstudio_ocr_model: str | None = Field(
+        default=None, description="VLM model for OCR in LM Studio (optional, OCR disabled if not set)"
+    )
+    lmstudio_api_key: str | None = Field(
+        default=None, description="API key for LM Studio (if authentication is enabled)"
     )
 
     # Filename formatting
@@ -135,6 +148,7 @@ _KEYCHAIN_KEY_FIELDS = {
     "openai_api_key": "openai_api_key",
     "gemini_api_key": "gemini_api_key",
     "omlx_api_key": "omlx_api_key",
+    "lmstudio_api_key": "lmstudio_api_key",
 }
 
 
