@@ -236,14 +236,14 @@ struct TemplatePrefsView: View {
         let matches = regex.matches(in: pattern, range: NSRange(pattern.startIndex..., in: pattern))
 
         if matches.isEmpty {
-            return "Template must contain at least one placeholder"
+            return String(localized: "Template must contain at least one placeholder")
         }
 
         for match in matches {
             if let range = Range(match.range(at: 1), in: pattern) {
                 let name = String(pattern[range])
                 if !Self.validPlaceholders.contains(name) {
-                    return "Invalid placeholder: {\(name)}"
+                    return String(localized: "Invalid placeholder: {\(name)}")
                 }
             }
         }

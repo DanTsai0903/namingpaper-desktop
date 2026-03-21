@@ -18,7 +18,7 @@ struct PaperListView: View {
     /// The display title for the current view.
     private var panelTitle: String {
         if viewModel.sidebarPanel == .search {
-            return "Search Results"
+            return String(localized: "Search Results")
         }
         guard let cat = viewModel.selectedCategory else {
             return viewModel.libraryName

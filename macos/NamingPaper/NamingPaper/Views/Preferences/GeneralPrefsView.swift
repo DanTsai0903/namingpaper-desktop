@@ -4,12 +4,24 @@ struct GeneralPrefsView: View {
     @AppStorage("appearance") private var appearance: String = "system"
     @AppStorage("authorDisplay") private var authorDisplay: String = "last"
     @AppStorage("journalDisplay") private var journalDisplay: String = "full"
+    @AppStorage("appLanguage") private var appLanguage: String = "system"
     @State private var papersDir: String = ""
     @State private var showMigratePicker = false
     @State private var isMigrating = false
     @State private var migrationError: String?
     @State private var pendingMigrationPath: String?
     @State private var showNotEmptyAlert = false
+    @State private var showRelaunchAlert = false
+
+    private let supportedLanguages: [(tag: String, name: String)] = [
+        ("system", "System"),
+        ("en", "English"),
+        ("zh-Hans", "简体中文"),
+        ("zh-Hant", "繁體中文"),
+        ("es", "Español"),
+        ("ja", "日本語"),
+        ("ko", "한국어"),
+    ]
 
     var body: some View {
         Form {
@@ -42,7 +54,7 @@ struct GeneralPrefsView: View {
                 }
             }
 
-            Section("Display") {
+            Section {
                 Picker("Authors Column", selection: $authorDisplay) {
                     Text("Last Name").tag("last")
                     Text("Full Name").tag("full")
@@ -59,6 +71,15 @@ struct GeneralPrefsView: View {
             }
 
             Section {
+                Picker("Language", selection: $appLanguage) {
+                    ForEach(supportedLanguages, id: \.tag) { lang in
+                        Text(lang.name).tag(lang.tag)
+                    }
+                }
+                .onChange(of: appLanguage) { _, newValue in
+                    setLanguage(newValue)
+                }
+
                 Picker("Theme", selection: $appearance) {
                     Text("System").tag("system")
                     Text("Light").tag("light")
@@ -103,6 +124,30 @@ struct GeneralPrefsView: View {
         } message: {
             Text("The selected folder already contains files. Existing files with the same name will be kept and library files will be skipped.")
         }
+        .alert("Relaunch to Apply", isPresented: $showRelaunchAlert) {
+            Button("Relaunch Now") { relaunchApp() }
+            Button("Later", role: .cancel) { }
+        } message: {
+            Text("The app needs to relaunch for the language change to take effect.")
+        }
+    }
+
+    private func setLanguage(_ tag: String) {
+        if tag == "system" {
+            UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+        } else {
+            UserDefaults.standard.set([tag], forKey: "AppleLanguages")
+        }
+        showRelaunchAlert = true
+    }
+
+    private func relaunchApp() {
+        let url = Bundle.main.bundleURL
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        task.arguments = ["-n", url.path]
+        try? task.run()
+        NSApp.terminate(nil)
     }
 
     private func migrateLibrary(to newPath: String) {
@@ -143,7 +188,7 @@ struct GeneralPrefsView: View {
                 }
             } catch {
                 await MainActor.run {
-                    migrationError = "Migration failed: \(error.localizedDescription)"
+                    migrationError = String(localized: "Migration failed: \(error.localizedDescription)")
                     isMigrating = false
                 }
             }

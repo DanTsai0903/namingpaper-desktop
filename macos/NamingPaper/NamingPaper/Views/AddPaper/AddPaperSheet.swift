@@ -26,7 +26,7 @@ struct AddPaperSheet: View {
                 Text(headerTitle)
                     .font(.headline)
                 Spacer()
-                Text("\(addVM.items.count) file\(addVM.items.count == 1 ? "" : "s")")
+                Text("\(addVM.items.count) files", comment: "File count label")
                     .foregroundStyle(.secondary)
                     .font(.caption)
             }
@@ -62,7 +62,7 @@ struct AddPaperSheet: View {
         }
     }
 
-    private var headerTitle: String {
+    private var headerTitle: LocalizedStringKey {
         switch viewModel.addPaperViewModel.phase {
         case .configure: return "Configure"
         case .processing: return "Processing"
@@ -167,7 +167,7 @@ struct AddPaperSheet: View {
                                     .lineLimit(nil)
                                     .textSelection(.enabled)
                             } else {
-                                Text(item.stage.rawValue)
+                                Text(item.stage.localizedName)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }

@@ -185,7 +185,7 @@ class AddPaperViewModel {
                             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
                             .filter { !$0.isEmpty }
                             .joined(separator: "\n")
-                        items[nextIndex].error = errorMsg.isEmpty ? "Commit failed" : errorMsg
+                        items[nextIndex].error = errorMsg.isEmpty ? String(localized: "Commit failed") : errorMsg
                     }
                 }
             } catch {
@@ -207,13 +207,13 @@ class AddPaperViewModel {
     ) -> String {
         // 1. Duplicate paper
         if let jsonResult, jsonResult.status == "skipped" {
-            return "This paper is already in your library."
+            return String(localized: "This paper is already in your library.")
         }
 
         // 2. JSON error from CLI (e.g. unrecognized PDF)
         if let jsonResult, let error = jsonResult.error {
             if error.lowercased().contains("confidence") || error.lowercased().contains("not") && error.lowercased().contains("academic") {
-                return "Could not recognize this PDF as an academic paper. It may not contain extractable metadata."
+                return String(localized: "Could not recognize this PDF as an academic paper. It may not contain extractable metadata.")
             }
             return error
         }
@@ -221,13 +221,13 @@ class AddPaperViewModel {
         // 3. Provider connectivity issues
         let combined = "\(cliResult.stderr)\n\(cliResult.stdout)".lowercased()
         if combined.contains("connection") || combined.contains("refused") || combined.contains("connect") {
-            return "Could not connect to the AI provider. Make sure Ollama or your configured provider is running."
+            return String(localized: "Could not connect to the AI provider. Make sure Ollama or your configured provider is running.")
         }
         if combined.contains("not found") && (combined.contains("model") || combined.contains("ollama")) {
-            return "The AI model was not found. Make sure the required model is installed in your provider."
+            return String(localized: "The AI model was not found. Make sure the required model is installed in your provider.")
         }
         if combined.contains("api") && (combined.contains("key") || combined.contains("auth") || combined.contains("401") || combined.contains("403")) {
-            return "Authentication failed. Check your API key in the AI Provider settings."
+            return String(localized: "Authentication failed. Check your API key in the AI Provider settings.")
         }
 
         // Fallback
@@ -235,7 +235,7 @@ class AddPaperViewModel {
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
             .joined(separator: "\n")
-        return errorMsg.isEmpty ? "An unknown error occurred." : errorMsg
+        return errorMsg.isEmpty ? String(localized: "An unknown error occurred.") : errorMsg
     }
 
     func reset() {

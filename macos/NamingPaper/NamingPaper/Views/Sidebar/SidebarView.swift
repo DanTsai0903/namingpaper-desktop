@@ -21,7 +21,7 @@ struct SidebarView: View {
             // Panel switcher
             Picker("", selection: $viewModel.sidebarPanel) {
                 ForEach(SidebarPanel.allCases, id: \.self) { panel in
-                    Text(panel.rawValue).tag(panel)
+                    Text(panel.localizedName).tag(panel)
                 }
             }
             .pickerStyle(.segmented)

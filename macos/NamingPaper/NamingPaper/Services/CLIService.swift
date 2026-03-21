@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 struct CLIResult {
     let exitCode: Int32
@@ -13,6 +14,10 @@ enum AddStage: String {
     case categorizing = "Categorizing"
     case done = "Done"
     case failed = "Failed"
+
+    var localizedName: LocalizedStringKey {
+        LocalizedStringKey(rawValue)
+    }
 }
 
 enum AddFlowPhase {

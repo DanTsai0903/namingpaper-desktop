@@ -47,6 +47,7 @@
 		A10026000000000000000026 /* DirectoryMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20026000000000000000026 /* DirectoryMonitor.swift */; };
 		A10027000000000000000027 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20027000000000000000027 /* OnboardingView.swift */; };
 		A10028000000000000000028 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20028000000000000000028 /* AboutView.swift */; };
+		A10029000000000000000029 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A20029000000000000000029 /* Localizable.xcstrings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -91,6 +92,7 @@
 		A20026000000000000000026 /* DirectoryMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectoryMonitor.swift; sourceTree = "<group>"; };
 		A20027000000000000000027 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		A20028000000000000000028 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
+		A20029000000000000000029 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -127,6 +129,7 @@
 				A40009000000000000000009 /* Services */,
 				A4000A00000000000000000A /* Utilities */,
 				A2001D0000000000000001D /* Assets.xcassets */,
+				A20029000000000000000029 /* Localizable.xcstrings */,
 				A4000B00000000000000000B /* Preview Content */,
 				A20023000000000000000023 /* NamingPaper.entitlements */,
 			);
@@ -333,6 +336,11 @@
 			knownRegions = (
 				en,
 				Base,
+				"zh-Hans",
+				"zh-Hant",
+				es,
+				ja,
+				ko,
 			);
 			mainGroup = A40001000000000000000001;
 			packageReferences = (
@@ -354,6 +362,7 @@
 			files = (
 				A1001D0000000000000001D /* Assets.xcassets in Resources */,
 				A1001E0000000000000001E /* Preview Assets.xcassets in Resources */,
+				A10029000000000000000029 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -532,7 +541,7 @@
 				CODE_SIGN_ENTITLEMENTS = NamingPaper/NamingPaper.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"NamingPaper/Preview Content\"";
 				DEVELOPMENT_TEAM = TH7R9776S3;
@@ -547,7 +556,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.2;
+				MARKETING_VERSION = 0.1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.namingpaper.NamingPaper;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -563,7 +572,7 @@
 				CODE_SIGN_ENTITLEMENTS = NamingPaper/NamingPaper.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"NamingPaper/Preview Content\"";
 				DEVELOPMENT_TEAM = TH7R9776S3;
@@ -578,7 +587,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.2;
+				MARKETING_VERSION = 0.1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.namingpaper.NamingPaper;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

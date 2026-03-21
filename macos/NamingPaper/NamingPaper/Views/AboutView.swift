@@ -46,7 +46,7 @@ class AboutWindowController {
             backing: .buffered,
             defer: false
         )
-        panel.title = "About NamingPaper"
+        panel.title = String(localized: "About NamingPaper")
         panel.isReleasedWhenClosed = false
         panel.contentView = NSHostingView(rootView: AboutView())
         panel.center()

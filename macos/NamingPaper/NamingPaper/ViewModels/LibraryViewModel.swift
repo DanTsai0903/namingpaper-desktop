@@ -7,6 +7,10 @@ enum SidebarPanel: String, CaseIterable {
     case categories = "Categories"
     case recent = "Recent"
     case search = "Search"
+
+    var localizedName: LocalizedStringKey {
+        LocalizedStringKey(rawValue)
+    }
 }
 
 @Observable

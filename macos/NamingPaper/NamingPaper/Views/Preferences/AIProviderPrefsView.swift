@@ -209,38 +209,39 @@ struct AIProviderPrefsView: View {
     }
 
     private var defaultModelName: String {
+        let prefix = String(localized: "Default:")
         switch editProvider {
-        case "ollama": return "Default: qwen3:8b"
-        case "omlx": return "Default: Qwen3.5-2B-MLX-4bit"
-        case "lmstudio": return "Default: qwen3.5-2b-optiq"
-        default: return "Default"
+        case "ollama": return "\(prefix) qwen3:8b"
+        case "omlx": return "\(prefix) Qwen3.5-2B-MLX-4bit"
+        case "lmstudio": return "\(prefix) qwen3.5-2b-optiq"
+        default: return String(localized: "Default")
         }
     }
 
     private var defaultOCRModelName: String {
+        let prefix = String(localized: "Default:")
         switch editProvider {
-        case "ollama": return "Default: deepseek-ocr"
-        case "omlx": return "Default: DeepSeek-OCR-8bit"
-        case "lmstudio": return "Optional (not set by default)"
-        default: return "Default"
+        case "ollama": return "\(prefix) deepseek-ocr"
+        case "omlx": return "\(prefix) DeepSeek-OCR-8bit"
+        case "lmstudio": return String(localized: "Optional (not set by default)")
+        default: return String(localized: "Default")
         }
     }
 
     private var defaultBaseURL: String {
+        let prefix = String(localized: "Default:")
         switch editProvider {
-        case "ollama": return "Default: http://localhost:11434"
-        case "omlx": return "Default: http://localhost:8000"
-        case "lmstudio": return "Default: http://localhost:1234"
+        case "ollama": return "\(prefix) http://localhost:11434"
+        case "omlx": return "\(prefix) http://localhost:8000"
+        case "lmstudio": return "\(prefix) http://localhost:1234"
         default: return ""
         }
     }
 
     private var apiKeyPlaceholder: String {
         switch editProvider {
-        case "ollama": return "Optional"
-        case "omlx": return "Optional"
-        case "lmstudio": return "Optional"
-        default: return "Enter \(providerDisplayName(editProvider)) API key"
+        case "ollama", "omlx", "lmstudio": return String(localized: "Optional")
+        default: return String(localized: "Enter \(providerDisplayName(editProvider)) API key")
         }
     }
 

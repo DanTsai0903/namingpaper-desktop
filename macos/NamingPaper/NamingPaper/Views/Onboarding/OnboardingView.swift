@@ -202,7 +202,7 @@ struct OnboardingView: View {
             try ConfigService.shared.writeConfig(config)
             onComplete()
         } catch {
-            errorMessage = "Failed to set up library: \(error.localizedDescription)"
+            errorMessage = String(localized: "Failed to set up library: \(error.localizedDescription)")
             withAnimation { step = 1 }
         }
     }

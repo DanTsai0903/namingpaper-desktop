@@ -104,11 +104,11 @@ struct CommandPaletteView: View {
 
     private var allActions: [PaletteAction] {
         [
-            PaletteAction(id: "add", title: "Add Paper...", icon: "plus.circle", action: .addPaper),
-            PaletteAction(id: "search", title: "Search Library", icon: "magnifyingglass", action: .search),
-            PaletteAction(id: "prefs", title: "Open Preferences", icon: "gearshape", action: .preferences),
-            PaletteAction(id: "reveal", title: "Reveal in Finder", icon: "folder", action: .revealInFinder),
-            PaletteAction(id: "sync", title: "Sync Library", icon: "arrow.triangle.2.circlepath", action: .sync),
+            PaletteAction(id: "add", title: String(localized: "Add Paper..."), icon: "plus.circle", action: .addPaper),
+            PaletteAction(id: "search", title: String(localized: "Search Library"), icon: "magnifyingglass", action: .search),
+            PaletteAction(id: "prefs", title: String(localized: "Open Preferences"), icon: "gearshape", action: .preferences),
+            PaletteAction(id: "reveal", title: String(localized: "Reveal in Finder"), icon: "folder", action: .revealInFinder),
+            PaletteAction(id: "sync", title: String(localized: "Sync Library"), icon: "arrow.triangle.2.circlepath", action: .sync),
         ]
     }
 
