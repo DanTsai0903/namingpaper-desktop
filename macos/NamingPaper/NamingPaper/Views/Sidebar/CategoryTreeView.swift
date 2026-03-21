@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import UniformTypeIdentifiers
 
 struct CategoryTreeView: View {
@@ -265,6 +266,9 @@ struct CategoryTreeView: View {
             renameText = node.fullPath
             renamingCategory = node.fullPath
         }
+        Button("Download to Folder...") {
+            downloadCategory(node.fullPath)
+        }
         Divider()
         Button("Delete", role: .destructive) {
             categoryToDelete = node.fullPath
@@ -272,6 +276,54 @@ struct CategoryTreeView: View {
     }
 
     // MARK: - Helpers
+
+    private func downloadCategory(_ categoryPath: String) {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        panel.prompt = "Download"
+        panel.message = "Choose a folder to save papers from \"\(categoryPath)\""
+
+        guard panel.runModal() == .OK, let destDir = panel.url else { return }
+        let papers = viewModel.papers.filter { $0.category == categoryPath }
+        var copied = 0
+        var failed = 0
+        for paper in papers {
+            guard let sourceURL = paper.pdfURL, paper.pdfExists else {
+                failed += 1
+                continue
+            }
+            let destFile = destDir.appendingPathComponent(sourceURL.lastPathComponent)
+            do {
+                if FileManager.default.fileExists(atPath: destFile.path) {
+                    try FileManager.default.removeItem(at: destFile)
+                }
+                try FileManager.default.copyItem(at: sourceURL, to: destFile)
+                copied += 1
+            } catch {
+                failed += 1
+            }
+        }
+
+        let alert = NSAlert()
+        if copied > 0 {
+            alert.messageText = "Download Complete"
+            var info = "Downloaded \(copied) paper(s) to the selected folder."
+            if failed > 0 {
+                info += "\n\(failed) paper(s) could not be downloaded."
+            }
+            alert.informativeText = info
+            alert.alertStyle = .informational
+            alert.runModal()
+            NSWorkspace.shared.open(destDir)
+        } else {
+            alert.messageText = "Download Failed"
+            alert.informativeText = "No papers could be downloaded. Some files may be missing."
+            alert.alertStyle = .warning
+            alert.runModal()
+        }
+    }
 
     private func submitNewCategory() {
         let name = newCategoryName.trimmingCharacters(in: .whitespaces)

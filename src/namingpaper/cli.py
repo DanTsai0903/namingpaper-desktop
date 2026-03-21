@@ -1459,5 +1459,122 @@ def sync(
         console.print("[dim]  namingpaper add <file> --execute[/dim]")
 
 
+@app.command()
+def download(
+    paper_ids: Annotated[
+        list[str] | None,
+        typer.Argument(help="Paper IDs to download", show_default=False),
+    ] = None,
+    output: Annotated[
+        Path,
+        typer.Option("--output", "-o", help="Output directory"),
+    ] = ...,
+    query: Annotated[
+        str | None,
+        typer.Option("--query", "-q", help="Search query to select papers"),
+    ] = None,
+    category: Annotated[
+        str | None,
+        typer.Option("--category", "-c", help="Download all papers in a category"),
+    ] = None,
+    all_papers: Annotated[
+        bool,
+        typer.Option("--all", help="Download all papers in the library"),
+    ] = False,
+    flat: Annotated[
+        bool,
+        typer.Option("--flat", help="No category subfolders; place all PDFs in output root"),
+    ] = False,
+    overwrite: Annotated[
+        bool,
+        typer.Option("--overwrite", help="Overwrite existing files"),
+    ] = False,
+    limit: Annotated[
+        int,
+        typer.Option("--limit", help="Max papers to download"),
+    ] = 0,
+    execute: Annotated[
+        bool,
+        typer.Option("--execute", "-x", help="Actually copy files (default is dry-run)"),
+    ] = False,
+) -> None:
+    """Download papers from the library to a folder."""
+    from namingpaper.database import Database
+    from namingpaper.download import download_papers, resolve_target_path
+
+    has_ids = paper_ids is not None and len(paper_ids) > 0
+    if not has_ids and not query and not category and not all_papers:
+        console.print(
+            "[red]Specify paper IDs, --query, --category, or --all[/red]"
+        )
+        raise typer.Exit(1)
+
+    with Database() as db:
+        papers = []
+
+        if has_ids:
+            for pid in paper_ids:  # type: ignore[union-attr]
+                paper = db.get_paper(pid)
+                if paper:
+                    papers.append(paper)
+                else:
+                    console.print(f"[yellow]Paper not found: {pid}[/yellow]")
+        elif query:
+            papers = db.search(query=query)
+        elif category:
+            papers = db.list_papers(category=category, limit=10_000)
+        elif all_papers:
+            papers = db.list_papers(limit=10_000)
+
+    if limit > 0:
+        papers = papers[:limit]
+
+    if not papers:
+        if query:
+            console.print("[yellow]No papers found matching query.[/yellow]")
+        elif category:
+            console.print(f"[yellow]No papers found in category \"{category}\".[/yellow]")
+        else:
+            console.print("[yellow]No papers found.[/yellow]")
+        raise typer.Exit(1)
+
+    # Show what would be downloaded
+    table = Table(title="Papers to download")
+    table.add_column("ID", style="dim", width=8)
+    table.add_column("Title", max_width=40)
+    table.add_column("Target", max_width=50)
+
+    for p in papers:
+        target = resolve_target_path(p, output, flat=flat)
+        table.add_row(
+            p.id,
+            p.title[:40] + ("..." if len(p.title) > 40 else ""),
+            str(target),
+        )
+
+    console.print(table)
+    console.print(f"\n{len(papers)} paper(s) selected.")
+
+    if not execute:
+        console.print("\n[dim]Dry run mode. Use --execute to download.[/dim]")
+        return
+
+    summary = download_papers(papers, output, flat=flat, overwrite=overwrite)
+
+    console.print(f"\nTotal: {summary.total}")
+    console.print(f"[green]Copied: {summary.copied}[/green]")
+    if summary.skipped:
+        console.print(f"[yellow]Skipped (already exist): {summary.skipped}[/yellow]")
+    if summary.failed:
+        console.print(
+            f"[red]Failed (missing source): {summary.failed}[/red]"
+        )
+        for pid in summary.failed_papers:
+            console.print(f"  [dim]{pid}[/dim]")
+        console.print(
+            "\n[dim]Tip: run 'namingpaper sync' to fix missing files.[/dim]"
+        )
+
+
 if __name__ == "__main__":
     app()

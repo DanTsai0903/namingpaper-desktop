@@ -61,9 +61,9 @@ struct PaperDetailView: View {
                 }
 
                 Button {
-                    exportBundle()
+                    downloadToFolder()
                 } label: {
-                    Label("Export Bundle", systemImage: "square.and.arrow.up")
+                    Label("Download to Folder", systemImage: "arrow.down.circle")
                 }
 
                 ShareLink(item: paper.pdfURL ?? URL(fileURLWithPath: "/"), preview: SharePreview(paper.title))
@@ -503,6 +503,32 @@ struct PaperDetailView: View {
     private func recategorize(to category: String) {
         guard category != paper.category else { return }
         viewModel.movePaper(paper, toCategory: category)
+    }
+
+    private func downloadToFolder() {
+        guard let sourceURL = paper.pdfURL, paper.pdfExists else { return }
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        panel.prompt = "Download"
+        panel.message = "Choose a folder to save the PDF"
+
+        guard panel.runModal() == .OK, let destDir = panel.url else { return }
+        let destFile = destDir.appendingPathComponent(sourceURL.lastPathComponent)
+        do {
+            if FileManager.default.fileExists(atPath: destFile.path) {
+                try FileManager.default.removeItem(at: destFile)
+            }
+            try FileManager.default.copyItem(at: sourceURL, to: destFile)
+            NSWorkspace.shared.activateFileViewerSelecting([destFile])
+        } catch {
+            let alert = NSAlert()
+            alert.messageText = "Download Failed"
+            alert.informativeText = error.localizedDescription
+            alert.alertStyle = .warning
+            alert.runModal()
+        }
     }
 
     private func exportBundle() {

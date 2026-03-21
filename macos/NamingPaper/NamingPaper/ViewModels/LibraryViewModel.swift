@@ -19,7 +19,7 @@ class LibraryViewModel {
 
     var papers: [Paper] = []
     var categories: [Category] = []
-    var selectedPaperID: String?
+    var selectedPaperIDs: Set<String> = []
     var selectedCategory: String?
     var sidebarPanel: SidebarPanel = .categories
     var sortOrder: PaperSortOrder = .title

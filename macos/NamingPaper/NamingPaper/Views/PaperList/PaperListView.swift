@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct PaperListView: View {
     @Environment(LibraryViewModel.self) var viewModel
@@ -7,6 +8,9 @@ struct PaperListView: View {
     @SceneStorage("paperTableColumns_v2") private var columnCustomization: TableColumnCustomization<Paper>
     @AppStorage("authorDisplay") private var authorDisplay: String = "last"
     @AppStorage("journalDisplay") private var journalDisplay: String = "full"
+
+    /// Tracks the last paper ID that was added to selection, for opening tabs.
+    @State private var lastSelectedID: String?
 
     /// Direct child subcategories of the currently selected category.
     private var childCategories: [CategoryNode] {
@@ -82,8 +86,11 @@ struct PaperListView: View {
                 .background(TableConfigurator())
         }
         .navigationTitle(panelTitle)
-        .onChange(of: viewModel.selectedPaperID) { _, newID in
-            if let id = newID, let paper = viewModel.paper(for: id) {
+        .onChange(of: viewModel.selectedPaperIDs) { oldIDs, newIDs in
+            // Find the newly added ID (for opening a tab on click)
+            let added = newIDs.subtracting(oldIDs)
+            if let id = added.first, let paper = viewModel.paper(for: id) {
+                lastSelectedID = id
                 tabManager.openTab(for: paper)
                 viewModel.markRecent(paperID: id)
                 if viewModel.sidebarPanel == .search {
@@ -107,7 +114,7 @@ struct PaperListView: View {
 
     private var paperTable: some View {
         @Bindable var viewModel = viewModel
-        return Table(directPapers, selection: $viewModel.selectedPaperID, sortOrder: $sortOrder, columnCustomization: $columnCustomization) {
+        return Table(directPapers, selection: $viewModel.selectedPaperIDs, sortOrder: $sortOrder, columnCustomization: $columnCustomization) {
             TableColumn("Title", value: \Paper.title) { paper in
                 HStack(spacing: 4) {
                     PaperRowView(
@@ -120,11 +127,6 @@ struct PaperListView: View {
                     .opacity(viewModel.newlyAddedIDs.contains(paper.id) ? 0.6 : 1.0)
                     .animation(.easeIn(duration: 0.5), value: viewModel.newlyAddedIDs.contains(paper.id))
                 }
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    viewModel.selectedPaperID = paper.id
-                }
-                .onDrag { paper.dragItemProvider }
             }
             .width(min: 200)
             .disabledCustomizationBehavior(.visibility)
@@ -162,7 +164,93 @@ struct PaperListView: View {
             .customizationID("dateAdded")
             .defaultVisibility(.hidden)
         }
+        .contextMenu(forSelectionType: String.self) { selectedIDs in
+            let papers = selectedIDs.compactMap { viewModel.paper(for: $0) }
+            if !papers.isEmpty {
+                Button("Download to Folder...") {
+                    downloadPapers(papers)
+                }
+                Button("Reveal in Finder") {
+                    for paper in papers {
+                        if let url = paper.pdfURL, paper.pdfExists {
+                            NSWorkspace.shared.activateFileViewerSelecting([url])
+                        }
+                    }
+                }
+                let shareURLs = papers.compactMap { $0.pdfURL }
+                if !shareURLs.isEmpty {
+                    ShareLink(items: shareURLs) {
+                        Label("Share", systemImage: "square.and.arrow.up")
+                    }
+                }
+                Divider()
+                Menu("Move to Category") {
+                    ForEach(viewModel.allCategories) { category in
+                        Button(category.name) {
+                            for paper in papers {
+                                viewModel.movePaper(paper, toCategory: category.name)
+                            }
+                        }
+                    }
+                }
+                Divider()
+                Button("Remove", role: .destructive) {
+                    for paper in papers {
+                        viewModel.removePaper(id: paper.id, deleteFile: false)
+                    }
+                }
+            }
+        }
         .id("\(authorDisplay)-\(journalDisplay)")
+    }
+
+    private func downloadPapers(_ papers: [Paper]) {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        panel.prompt = "Download"
+        panel.message = papers.count == 1
+            ? "Choose a folder to save the PDF"
+            : "Choose a folder to save \(papers.count) papers"
+
+        guard panel.runModal() == .OK, let destDir = panel.url else { return }
+        var copied = 0
+        var failed = 0
+        for paper in papers {
+            guard let sourceURL = paper.pdfURL, paper.pdfExists else {
+                failed += 1
+                continue
+            }
+            let destFile = destDir.appendingPathComponent(sourceURL.lastPathComponent)
+            do {
+                if FileManager.default.fileExists(atPath: destFile.path) {
+                    try FileManager.default.removeItem(at: destFile)
+                }
+                try FileManager.default.copyItem(at: sourceURL, to: destFile)
+                copied += 1
+            } catch {
+                failed += 1
+            }
+        }
+
+        let alert = NSAlert()
+        if copied > 0 {
+            alert.messageText = "Download Complete"
+            var info = "Downloaded \(copied) paper(s) to the selected folder."
+            if failed > 0 {
+                info += "\n\(failed) paper(s) could not be downloaded."
+            }
+            alert.informativeText = info
+            alert.alertStyle = .informational
+            alert.runModal()
+            NSWorkspace.shared.open(destDir)
+        } else {
+            alert.messageText = "Download Failed"
+            alert.informativeText = "No papers could be downloaded. Some files may be missing."
+            alert.alertStyle = .warning
+            alert.runModal()
+        }
     }
 
     /// Find a node by its full path in the tree.
