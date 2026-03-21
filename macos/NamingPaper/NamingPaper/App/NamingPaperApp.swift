@@ -1,4 +1,5 @@
 import SwiftUI
+import Sparkle
 
 @main
 struct NamingPaperApp: App {
@@ -7,6 +8,12 @@ struct NamingPaperApp: App {
     @State private var libraryViewModel: LibraryViewModel? = ConfigService.shared.configExists ? LibraryViewModel() : nil
     @State private var tabManager = TabManager()
     @AppStorage("appearance") private var appearance: String = "system"
+
+    private let updaterController = SPUStandardUpdaterController(
+        startingUpdater: true,
+        updaterDelegate: nil,
+        userDriverDelegate: nil
+    )
 
     private var colorScheme: ColorScheme? {
         switch appearance {
@@ -69,6 +76,8 @@ struct NamingPaperApp: App {
                 Button("About NamingPaper") {
                     AboutWindowController.shared.show()
                 }
+
+                CheckForUpdatesView(updater: updaterController.updater)
             }
 
             CommandGroup(replacing: .newItem) {

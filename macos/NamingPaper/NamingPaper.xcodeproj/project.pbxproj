@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		6D5FF1862F6C0451000F83C0 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 6D5FF1852F6C0451000F83C0 /* Sparkle */; };
+		6D5FF1882F6C05B4000F83C0 /* CheckForUpdatesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D5FF1872F6C05B4000F83C0 /* CheckForUpdatesView.swift */; };
 		A10001000000000000000001 /* NamingPaperApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20001000000000000000001 /* NamingPaperApp.swift */; };
 		A10002000000000000000002 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20002000000000000000002 /* AppDelegate.swift */; };
 		A10003000000000000000003 /* Paper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20003000000000000000003 /* Paper.swift */; };
@@ -48,6 +50,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		6D5FF1872F6C05B4000F83C0 /* CheckForUpdatesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckForUpdatesView.swift; sourceTree = "<group>"; };
 		A20001000000000000000001 /* NamingPaperApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NamingPaperApp.swift; sourceTree = "<group>"; };
 		A20002000000000000000002 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		A20003000000000000000003 /* Paper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Paper.swift; sourceTree = "<group>"; };
@@ -96,6 +99,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1001F0000000000000001F /* libsqlite3.tbd in Frameworks */,
+				6D5FF1862F6C0451000F83C0 /* Sparkle in Frameworks */,
 				A10020000000000000000020 /* PDFKit.framework in Frameworks */,
 				A10021000000000000000021 /* Quartz.framework in Frameworks */,
 			);
@@ -179,6 +183,7 @@
 		A40008000000000000000008 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				6D5FF1872F6C05B4000F83C0 /* CheckForUpdatesView.swift */,
 				A20009000000000000000009 /* ContentView.swift */,
 				A20028000000000000000028 /* AboutView.swift */,
 				A4000C00000000000000000C /* Sidebar */,
@@ -187,7 +192,7 @@
 				A4000F00000000000000000F /* CommandPalette */,
 				A40010000000000000000010 /* AddPaper */,
 				A40011000000000000000011 /* Preferences */,
-			A40012000000000000000012 /* Onboarding */,
+				A40012000000000000000012 /* Onboarding */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -330,6 +335,9 @@
 				Base,
 			);
 			mainGroup = A40001000000000000000001;
+			packageReferences = (
+				6D5FF1842F6C0451000F83C0 /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
 			productRefGroup = A40003000000000000000003 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -384,11 +392,12 @@
 				A1001A0000000000000001A /* CLIService.swift in Sources */,
 				A1001B0000000000000001B /* ConfigService.swift in Sources */,
 				A1001C0000000000000001C /* KeyboardShortcuts.swift in Sources */,
+				6D5FF1882F6C05B4000F83C0 /* CheckForUpdatesView.swift in Sources */,
 				A10024000000000000000024 /* KeychainService.swift in Sources */,
 				A10025000000000000000025 /* TemplatePrefsView.swift in Sources */,
 				A10026000000000000000026 /* DirectoryMonitor.swift in Sources */,
-			A10027000000000000000027 /* OnboardingView.swift in Sources */,
-			A10028000000000000000028 /* AboutView.swift in Sources */,
+				A10027000000000000000027 /* OnboardingView.swift in Sources */,
+				A10028000000000000000028 /* AboutView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -523,9 +532,10 @@
 				CODE_SIGN_ENTITLEMENTS = NamingPaper/NamingPaper.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"NamingPaper/Preview Content\"";
+				DEVELOPMENT_TEAM = TH7R9776S3;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -537,7 +547,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.1;
+				MARKETING_VERSION = 0.1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.namingpaper.NamingPaper;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -553,9 +563,10 @@
 				CODE_SIGN_ENTITLEMENTS = NamingPaper/NamingPaper.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"NamingPaper/Preview Content\"";
+				DEVELOPMENT_TEAM = TH7R9776S3;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -567,7 +578,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.1;
+				MARKETING_VERSION = 0.1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.namingpaper.NamingPaper;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -597,6 +608,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		6D5FF1842F6C0451000F83C0 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		6D5FF1852F6C0451000F83C0 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6D5FF1842F6C0451000F83C0 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A80001000000000000000001 /* Project object */;
 }

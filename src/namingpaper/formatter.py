@@ -98,19 +98,17 @@ def format_title(title: str) -> str:
 def build_filename(
     metadata: PaperMetadata,
     max_authors: int | None = None,
-    max_filename_length: int | None = None,
 ) -> str:
     """Build filename from paper metadata.
 
-    Format: author names_(year, journal abbrev)_topic.pdf
+    Format: authors, (year, journal), title.pdf
 
     Examples:
-        "Fama, French_(1993, JFE)_Common risk factors.pdf"
-        "Smith et al_(2020, AER)_Economic impacts of climate....pdf"
+        "Fama and French, (1993, JFE), Common risk factors in the returns on stocks and bonds.pdf"
+        "Smith et al, (2020, AER), Economic impacts of climate change.pdf"
     """
     settings = get_settings()
     max_authors = max_authors or settings.max_authors
-    max_filename_length = max_filename_length or settings.max_filename_length
 
     authors_str = format_authors(metadata.authors, max_authors)
     journal_str = format_journal(metadata.journal, metadata.journal_abbrev)
@@ -121,17 +119,6 @@ def build_filename(
 
     # Sanitize
     filename = sanitize_filename(filename)
-
-    # Truncate if too long (preserve .pdf extension, cut at word boundary)
-    if len(filename) > max_filename_length:
-        limit = max_filename_length - 7  # room for "....pdf"
-        truncated = filename[:limit]
-        # Cut at last space to avoid mid-word truncation
-        last_space = truncated.rfind(" ")
-        if last_space > limit // 2:
-            truncated = truncated[:last_space]
-        truncated = truncated.rstrip(".,;: ")
-        filename = truncated + "....pdf"
 
     return filename
 

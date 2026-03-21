@@ -687,7 +687,7 @@ def check(
 
     if provider_name == "ollama":
         ocr_model = settings.ollama_ocr_model or "deepseek-ocr"
-        text_model = settings.model_name or "qwen3:8b"
+        text_model = settings.model_name or "qwen3.5:4b"
         base_url = settings.ollama_base_url
 
         # Check connectivity
@@ -730,8 +730,8 @@ def check(
             )
             raise typer.Exit(1)
     elif provider_name == "omlx":
-        text_model = settings.model_name or "mlx-community/Qwen3-8B-4bit"
-        ocr_model = settings.omlx_ocr_model or "mlx-community/Qwen2.5-VL-7B-Instruct-4bit"
+        text_model = settings.model_name or "mlx-community/Qwen3.5-4B-MLX-4bit"
+        ocr_model = settings.omlx_ocr_model or "mlx-community/DeepSeek-OCR-8bit"
         base_url = settings.omlx_base_url
 
         try:

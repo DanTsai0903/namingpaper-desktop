@@ -53,14 +53,15 @@ You can also build from source by opening `macos/NamingPaper/NamingPaper.xcodepr
 
 ### CLI Quick Start
 
-The default provider is ollama (local, no API key needed). Install from [ollama.com](https://ollama.com). Another local option is [oMLX](https://github.com/jundot/omlx) for Apple Silicon Macs.
+The default provider is ollama (local, no API key needed). Install from [ollama.com](https://ollama.com). Other local options include [oMLX](https://github.com/jundot/omlx) for Apple Silicon Macs and [LM Studio](https://lmstudio.ai) for cross-platform local inference.
 
 Default models by provider:
 
 | Provider | Text Model | OCR Model |
 | -------- | ---------- | --------- |
-| ollama | `qwen3:8b` | `deepseek-ocr` |
-| oMLX | `Qwen3.5-9B-MLX-4bit` | `DeepSeek-OCR-8bit` |
+| ollama | `qwen3.5:4b` | `deepseek-ocr` |
+| oMLX | `Qwen3.5-2B-MLX-4bit` | `DeepSeek-OCR-8bit` |
+| LM Studio | `qwen3.5-2b-optiq` | — (optional, configure via `lmstudio_ocr_model`) |
 | Claude | `claude-sonnet-4-20250514` | — |
 | OpenAI | `gpt-4o` | — |
 | Gemini | `gemini-2.0-flash` | — |
@@ -126,7 +127,7 @@ Rename a single PDF.
 | ------ | ----------- |
 | `-x, --execute` | Actually rename (default is dry-run) |
 | `-y, --yes` | Skip confirmation |
-| `-p, --provider` | AI provider: `ollama`, `omlx`, `claude`, `openai`, `gemini` |
+| `-p, --provider` | AI provider: `ollama`, `omlx`, `lmstudio`, `claude`, `openai`, `gemini` |
 | `-m, --model` | Override default model |
 | `--ocr-model` | Override Ollama OCR model |
 | `-t, --template` | Filename template or preset |
@@ -173,6 +174,7 @@ Placeholders: `{authors}`, `{authors_full}`, `{authors_abbrev}`, `{year}`, `{jou
 | -------- | ----- | ----- |
 | **Ollama** (default) | `ollama pull qwen3:8b` | Local, no API key |
 | **oMLX** | `brew services start omlx` | Apple Silicon only, local MLX inference |
+| **LM Studio** | Download from [lmstudio.ai](https://lmstudio.ai), load a model, start server | Cross-platform, local, port 1234 |
 | **Claude** | `NAMINGPAPER_ANTHROPIC_API_KEY` | |
 | **OpenAI** | `NAMINGPAPER_OPENAI_API_KEY` | Requires `namingpaper[openai]` |
 | **Gemini** | `NAMINGPAPER_GEMINI_API_KEY` | Requires `namingpaper[gemini]` |

@@ -17,7 +17,7 @@ class oMLXProvider(AIProvider):
     Supports a two-stage pipeline: VLM OCR + text model for metadata parsing.
     """
 
-    DEFAULT_TEXT_MODEL = "mlx-community/Qwen3.5-9B-MLX-4bit"
+    DEFAULT_TEXT_MODEL = "mlx-community/Qwen3.5-2B-MLX-4bit"
     DEFAULT_OCR_MODEL = "mlx-community/DeepSeek-OCR-8bit"
     DEFAULT_BASE_URL = "http://localhost:8000"
 

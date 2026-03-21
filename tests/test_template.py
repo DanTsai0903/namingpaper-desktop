@@ -112,15 +112,14 @@ class TestBuildFilenameFromTemplate:
         result = build_filename_from_template(metadata, "{journal_abbrev}")
         assert "JFE" in result
 
-    def test_max_filename_length(self, metadata: PaperMetadata) -> None:
-        """Should truncate filename if too long."""
+    def test_no_truncation(self, metadata: PaperMetadata) -> None:
+        """Should not truncate long filenames."""
         result = build_filename_from_template(
             metadata,
             "{authors} {title} {title} {title}",
-            max_filename_length=50,
         )
-        assert len(result) <= 50
         assert result.endswith(".pdf")
+        assert result.count("Common risk factors") == 3
 
     def test_adds_pdf_extension(self, metadata: PaperMetadata) -> None:
         """Should add .pdf extension if not present."""

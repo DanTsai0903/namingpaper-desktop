@@ -88,7 +88,7 @@ class TestBuildFilename:
         filename = build_filename(metadata)
         assert "(2020, Some Journal)" in filename
 
-    def test_max_length_enforced(self, sample_metadata: PaperMetadata):
-        filename = build_filename(sample_metadata, max_filename_length=50)
-        assert len(filename) <= 50
+    def test_no_truncation(self, sample_metadata: PaperMetadata):
+        filename = build_filename(sample_metadata)
+        assert "Common risk factors in the returns on stocks and bonds" in filename
         assert filename.endswith(".pdf")

@@ -67,7 +67,6 @@ def build_filename_from_template(
     metadata: PaperMetadata,
     template: str,
     max_authors: int | None = None,
-    max_filename_length: int | None = None,
 ) -> str:
     """Build filename from metadata using a template.
 
@@ -85,14 +84,12 @@ def build_filename_from_template(
         metadata: Paper metadata
         template: Template string or preset name
         max_authors: Maximum authors before "et al"
-        max_filename_length: Maximum filename length
 
     Returns:
         Formatted filename with .pdf extension
     """
     settings = get_settings()
     max_authors = max_authors or settings.max_authors
-    max_filename_length = max_filename_length or settings.max_filename_length
 
     # Resolve preset
     template = get_template(template)
@@ -118,16 +115,6 @@ def build_filename_from_template(
 
     # Sanitize
     filename = sanitize_filename(filename)
-
-    # Truncate if too long (cut at word boundary)
-    if len(filename) > max_filename_length:
-        limit = max_filename_length - 7  # room for "....pdf"
-        truncated = filename[:limit]
-        last_space = truncated.rfind(" ")
-        if last_space > limit // 2:
-            truncated = truncated[:last_space]
-        truncated = truncated.rstrip(".,;: ")
-        filename = truncated + "....pdf"
 
     return filename
 
