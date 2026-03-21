@@ -61,6 +61,15 @@ struct PaperDetailView: View {
                 }
 
                 Button {
+                    exportBundle()
+                } label: {
+                    Label("Export Bundle", systemImage: "square.and.arrow.up")
+                }
+
+                ShareLink(item: paper.pdfURL ?? URL(fileURLWithPath: "/"), preview: SharePreview(paper.title))
+                    .disabled(paper.pdfURL == nil)
+
+                Button {
                     showCategoryPicker.toggle()
                 } label: {
                     Label("Recategorize", systemImage: "arrow.up.doc.on.clipboard")
@@ -494,6 +503,29 @@ struct PaperDetailView: View {
     private func recategorize(to category: String) {
         guard category != paper.category else { return }
         viewModel.movePaper(paper, toCategory: category)
+    }
+
+    private func exportBundle() {
+        let panel = NSSavePanel()
+        let safeName = paper.title.prefix(50)
+            .replacingOccurrences(of: "/", with: "-")
+            .replacingOccurrences(of: ":", with: "-")
+        panel.nameFieldStringValue = "\(safeName).namingpaper"
+        panel.allowedContentTypes = [.namingpaperBundle]
+
+        guard panel.runModal() == .OK, let dest = panel.url else { return }
+        Task {
+            do {
+                let destination = dest.deletingLastPathComponent()
+                let bundleURL = try await SharingService.shared.exportPaper(paper, to: destination)
+                // Rename to match user's choice if different
+                if bundleURL != dest {
+                    try? FileManager.default.moveItem(at: bundleURL, to: dest)
+                }
+            } catch {
+                print("Export error: \(error.localizedDescription)")
+            }
+        }
     }
 }
 

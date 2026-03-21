@@ -22,7 +22,19 @@ struct PreferencesView: View {
                     Label("AI Provider", systemImage: "brain")
                 }
                 .tag(2)
+
+            BackupPrefsView()
+                .tabItem {
+                    Label("Backup", systemImage: "externaldrive.badge.timemachine")
+                }
+                .tag(3)
+
+            SyncPrefsView()
+                .tabItem {
+                    Label("iCloud Sync", systemImage: "icloud")
+                }
+                .tag(4)
         }
-        .frame(width: 550, height: 380)
+        .frame(width: 550, height: 450)
     }
 }

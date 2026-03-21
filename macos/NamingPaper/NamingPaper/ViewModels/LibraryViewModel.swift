@@ -118,6 +118,7 @@ class LibraryViewModel {
                 await MainActor.run { newlyAddedIDs.removeAll() }
             }
         }
+
     }
 
     @MainActor

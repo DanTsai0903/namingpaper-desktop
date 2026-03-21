@@ -8,6 +8,7 @@ struct AppConfig {
     var cliPath: String
     var template: String
     var baseURL: String
+    var databasePath: String
 
     /// The TOML key name for the API key based on provider
     var apiKeyTOMLName: String {
@@ -31,6 +32,8 @@ struct AppConfig {
         }
     }
 
+    static let defaultDatabasePath = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".namingpaper/library.db").path
+
     static let `default` = AppConfig(
         papersDir: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Papers").path,
         provider: "ollama",
@@ -38,7 +41,8 @@ struct AppConfig {
         apiKey: "",
         cliPath: "",
         template: "default",
-        baseURL: ""
+        baseURL: "",
+        databasePath: defaultDatabasePath
     )
 }
 
@@ -125,6 +129,7 @@ class ConfigService {
             case "provider": config.provider = value
             case "model": config.model = value
             case "template": config.template = value
+            case "database_path": config.databasePath = value
             case _ where apiKeyNames.contains(fullKey):
                 config.apiKey = value
             case _ where baseURLNames.contains(fullKey):
@@ -156,6 +161,9 @@ class ConfigService {
         if !config.template.isEmpty, config.template != "default" {
             lines.append("template = \"\(config.template)\"")
         }
+        if !config.databasePath.isEmpty, config.databasePath != AppConfig.defaultDatabasePath {
+            lines.append("database_path = \"\(config.databasePath)\"")
+        }
         lines.append("")
         return lines
     }
@@ -182,6 +190,13 @@ class ConfigService {
             case "template":
                 lines[i] = "template = \"\(config.template)\""
                 found.insert("template")
+            case "database_path":
+                if !config.databasePath.isEmpty, config.databasePath != AppConfig.defaultDatabasePath {
+                    lines[i] = "database_path = \"\(config.databasePath)\""
+                } else {
+                    lines[i] = "# database_path removed"
+                }
+                found.insert("database_path")
             case _ where apiKeyNames.contains(key):
                 // Replace existing API key line with the correct provider-specific key
                 if !config.apiKey.isEmpty {
@@ -219,6 +234,9 @@ class ConfigService {
         }
         if !found.contains("template"), !config.template.isEmpty, config.template != "default" {
             lines.append("template = \"\(config.template)\"")
+        }
+        if !found.contains("database_path"), !config.databasePath.isEmpty, config.databasePath != AppConfig.defaultDatabasePath {
+            lines.append("database_path = \"\(config.databasePath)\"")
         }
 
         return lines

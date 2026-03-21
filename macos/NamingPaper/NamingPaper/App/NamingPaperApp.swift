@@ -1,5 +1,6 @@
 import SwiftUI
 import Sparkle
+import UniformTypeIdentifiers
 
 @main
 struct NamingPaperApp: App {
@@ -31,7 +32,18 @@ struct NamingPaperApp: App {
                     .environment(tabManager)
                     .preferredColorScheme(colorScheme)
                     .frame(minWidth: 900, minHeight: 600)
-                    .onDrop(of: [.pdf], isTargeted: Bindable(libraryViewModel).isDragTargeted) { providers in
+                    .onDrop(of: [.pdf, .namingpaperBundle], isTargeted: Bindable(libraryViewModel).isDragTargeted) { providers in
+                        // Check for .namingpaper bundle files
+                        for provider in providers {
+                            if provider.hasItemConformingToTypeIdentifier(UTType.namingpaperBundle.identifier) {
+                                provider.loadItem(forTypeIdentifier: UTType.namingpaperBundle.identifier, options: nil) { data, _ in
+                                    guard let url = data as? URL else { return }
+                                    Task {
+                                        try? await SharingService.shared.importBundle(at: url)
+                                    }
+                                }
+                            }
+                        }
                         libraryViewModel.handleDrop(providers: providers)
                         return true
                     }
