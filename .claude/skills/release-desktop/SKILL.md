@@ -81,46 +81,6 @@ Follow these steps to release a new version of the NamingPaper macOS desktop app
 
    Verify the generated `appcast.xml` contains the correct version and EdDSA signature.
 
-5. **Add release notes to appcast.xml** (so the update dialog shows "what's new"):
-
-   Ask the user what's new in this version, then inject a `<description>` element into the latest `<item>` in the appcast. The description should be HTML wrapped in CDATA:
-
-   ```bash
-   # Use python to inject release notes into the appcast for the current version
-   python3 -c "
-   import xml.etree.ElementTree as ET
-   ET.register_namespace('sparkle', 'http://www.andymatuschak.org/xml-namespaces/sparkle')
-   tree = ET.parse('$HOME/sparkle-releases/appcast.xml')
-   root = tree.getroot()
-   ns = {'sparkle': 'http://www.andymatuschak.org/xml-namespaces/sparkle'}
-   for item in root.iter('item'):
-       ver = item.find('sparkle:shortVersionString', ns)
-       if ver is not None and ver.text == 'X.Y.Z':
-           desc = ET.SubElement(item, 'description')
-           desc.text = '''<![CDATA[
-   <h2>What'\''s New in X.Y.Z</h2>
-   <ul>
-   <li>Feature or fix description here</li>
-   </ul>
-   ]]>'''
-           break
-   tree.write('$HOME/sparkle-releases/appcast.xml', xml_declaration=True, encoding='unicode')
-   "
-   ```
-
-   Alternatively, you can manually edit the appcast.xml and add inside the latest `<item>`:
-   ```xml
-   <description><![CDATA[
-   <h2>What's New in X.Y.Z</h2>
-   <ul>
-     <li>Feature or fix description</li>
-     <li>Another change</li>
-   </ul>
-   ]]></description>
-   ```
-
-   Verify the appcast still looks correct after editing.
-
 ## Publish
 
 1. **Create or update GitHub release** on `DanTsai0903/namingpaper-desktop`:
@@ -149,21 +109,7 @@ Follow these steps to release a new version of the NamingPaper macOS desktop app
         --prerelease  # omit for stable release
       ```
 
-2. **Write release notes** after creating the release:
-    - Get the commit log between the previous tag and this one:
-      ```bash
-      gh api repos/DanTsai0903/namingpaper-desktop/compare/vPREV...vX.Y.Z --jq '.commits[] | "- " + (.commit.message | split("\n")[0])'
-      ```
-    - Write human-friendly release notes grouped by theme (e.g., "New Features", "macOS App Improvements", "Bug Fixes", "Other"). Don't just list commits — summarize what changed and why it matters.
-    - Update the release:
-      ```bash
-      gh release edit vX.Y.Z --repo DanTsai0903/namingpaper-desktop --notes "$(cat <<'EOF'
-      ... release notes ...
-      EOF
-      )"
-      ```
-
-3. **Verify** the release:
+2. **Verify** the release:
 
     ```bash
     gh release view vX.Y.Z --repo DanTsai0903/namingpaper-desktop

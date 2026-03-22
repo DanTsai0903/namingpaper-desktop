@@ -55,6 +55,7 @@ packages = ["src/namingpaper"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+pythonpath = ["src"]
 filterwarnings = [
     "ignore::DeprecationWarning:importlib._bootstrap",
 ]

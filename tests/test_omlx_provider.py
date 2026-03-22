@@ -24,7 +24,7 @@ def _chat_response(content: str) -> dict:
 class TestoMLXProviderDefaults:
     def test_default_values(self):
         p = oMLXProvider()
-        assert p.text_model == "mlx-community/Qwen3.5-9B-MLX-4bit"
+        assert p.text_model == "mlx-community/Qwen3.5-2B-MLX-4bit"
         assert p.ocr_model == "mlx-community/DeepSeek-OCR-8bit"
         assert p.base_url == "http://localhost:8000"
 
@@ -210,7 +210,7 @@ class TestGetProvideroMLX:
         provider = get_provider("omlx")
         assert isinstance(provider, oMLXProvider)
         assert provider.base_url == "http://localhost:8000"
-        assert provider.text_model == "mlx-community/Qwen3.5-9B-MLX-4bit"
+        assert provider.text_model == "mlx-community/Qwen3.5-2B-MLX-4bit"
 
         reset_settings()
 
