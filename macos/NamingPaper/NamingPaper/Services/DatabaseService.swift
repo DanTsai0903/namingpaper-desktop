@@ -13,7 +13,7 @@ actor DatabaseService {
     private var lastModified: Date?
 
     /// Known schema version — warn if DB is newer
-    private let knownSchemaVersion = 1
+    private let knownSchemaVersion = 2
 
     /// Schema warning message if DB is newer
     var schemaWarning: String?
@@ -42,6 +42,7 @@ actor DatabaseService {
             throw DatabaseError.openFailed(msg)
         }
         db = handle
+        migrateToV2()
         checkSchemaVersion()
         updateLastModified()
     }
@@ -672,6 +673,266 @@ actor DatabaseService {
         sqlite3_bind_text(stmt, 12, (id as NSString).utf8String, -1, nil)
 
         return sqlite3_step(stmt) == SQLITE_DONE
+    }
+
+    // MARK: - Chat Schema Migration (v2)
+
+    private func migrateToV2() {
+        guard let db else { return }
+        // Check if migration is needed by testing for paper_chunks table
+        let checkSQL = "SELECT name FROM sqlite_master WHERE type='table' AND name='paper_chunks'"
+        var checkStmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, checkSQL, -1, &checkStmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(checkStmt) }
+        if sqlite3_step(checkStmt) == SQLITE_ROW { return } // Already migrated
+
+        let migrations = [
+            """
+            CREATE TABLE IF NOT EXISTS paper_chunks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                paper_id TEXT NOT NULL,
+                page_number INTEGER NOT NULL,
+                chunk_index INTEGER NOT NULL,
+                text TEXT NOT NULL,
+                embedding BLOB,
+                indexed_at TEXT NOT NULL,
+                FOREIGN KEY (paper_id) REFERENCES papers(id) ON DELETE CASCADE
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_paper_chunks_paper_id ON paper_chunks(paper_id)",
+            """
+            CREATE TABLE IF NOT EXISTS paper_index_meta (
+                paper_id TEXT PRIMARY KEY,
+                pdf_modified_at TEXT NOT NULL,
+                suggested_questions TEXT,
+                indexed_at TEXT NOT NULL,
+                FOREIGN KEY (paper_id) REFERENCES papers(id) ON DELETE CASCADE
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS chat_conversations (
+                id TEXT PRIMARY KEY,
+                paper_id TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (paper_id) REFERENCES papers(id) ON DELETE CASCADE
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_chat_conversations_paper_id ON chat_conversations(paper_id)",
+            """
+            CREATE TABLE IF NOT EXISTS chat_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                conversation_id TEXT NOT NULL,
+                role TEXT NOT NULL,
+                content TEXT NOT NULL,
+                citations TEXT,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id) ON DELETE CASCADE
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation_id ON chat_messages(conversation_id)",
+            "PRAGMA foreign_keys = ON"
+        ]
+
+        for sql in migrations {
+            var stmt: OpaquePointer?
+            if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
+                sqlite3_step(stmt)
+                sqlite3_finalize(stmt)
+            }
+        }
+    }
+
+    // MARK: - Paper Chunks
+
+    func insertChunks(_ chunks: [(paperId: String, pageNumber: Int, chunkIndex: Int, text: String, embedding: Data?)], indexedAt: String) {
+        guard let db else { return }
+
+        let sql = "INSERT INTO paper_chunks (paper_id, page_number, chunk_index, text, embedding, indexed_at) VALUES (?, ?, ?, ?, ?, ?)"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+
+        for chunk in chunks {
+            sqlite3_reset(stmt)
+            sqlite3_bind_text(stmt, 1, (chunk.paperId as NSString).utf8String, -1, nil)
+            sqlite3_bind_int(stmt, 2, Int32(chunk.pageNumber))
+            sqlite3_bind_int(stmt, 3, Int32(chunk.chunkIndex))
+            sqlite3_bind_text(stmt, 4, (chunk.text as NSString).utf8String, -1, nil)
+            if let embedding = chunk.embedding {
+                embedding.withUnsafeBytes { ptr in
+                    _ = sqlite3_bind_blob(stmt, 5, ptr.baseAddress, Int32(embedding.count), nil)
+                }
+            } else {
+                sqlite3_bind_null(stmt, 5)
+            }
+            sqlite3_bind_text(stmt, 6, (indexedAt as NSString).utf8String, -1, nil)
+            sqlite3_step(stmt)
+        }
+    }
+
+    func deleteChunks(forPaper paperId: String) {
+        guard let db else { return }
+        let sql = "DELETE FROM paper_chunks WHERE paper_id = ?"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, (paperId as NSString).utf8String, -1, nil)
+        sqlite3_step(stmt)
+    }
+
+    func loadChunks(forPaper paperId: String) -> [PaperChunk] {
+        guard let db else { return [] }
+        let sql = "SELECT id, paper_id, page_number, chunk_index, text, embedding FROM paper_chunks WHERE paper_id = ? ORDER BY chunk_index"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+
+        sqlite3_bind_text(stmt, 1, (paperId as NSString).utf8String, -1, nil)
+
+        var chunks: [PaperChunk] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let id = Int(sqlite3_column_int64(stmt, 0))
+            let paperId = String(cString: sqlite3_column_text(stmt, 1))
+            let pageNumber = Int(sqlite3_column_int(stmt, 2))
+            let chunkIndex = Int(sqlite3_column_int(stmt, 3))
+            let text = String(cString: sqlite3_column_text(stmt, 4))
+            var embedding: Data?
+            if sqlite3_column_type(stmt, 5) != SQLITE_NULL {
+                let bytes = sqlite3_column_blob(stmt, 5)
+                let count = Int(sqlite3_column_bytes(stmt, 5))
+                if let bytes, count > 0 {
+                    embedding = Data(bytes: bytes, count: count)
+                }
+            }
+            chunks.append(PaperChunk(id: id, paperId: paperId, pageNumber: pageNumber, chunkIndex: chunkIndex, text: text, embedding: embedding))
+        }
+        return chunks
+    }
+
+    // MARK: - Index Metadata
+
+    func saveIndexMeta(paperId: String, pdfModifiedAt: String, suggestedQuestions: [String], indexedAt: String) {
+        guard let db else { return }
+        let questionsJSON = (try? JSONSerialization.data(withJSONObject: suggestedQuestions)).flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
+
+        let sql = "INSERT OR REPLACE INTO paper_index_meta (paper_id, pdf_modified_at, suggested_questions, indexed_at) VALUES (?, ?, ?, ?)"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+
+        sqlite3_bind_text(stmt, 1, (paperId as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 2, (pdfModifiedAt as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 3, (questionsJSON as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 4, (indexedAt as NSString).utf8String, -1, nil)
+        sqlite3_step(stmt)
+    }
+
+    func loadIndexMeta(forPaper paperId: String) -> IndexMeta? {
+        guard let db else { return nil }
+        let sql = "SELECT paper_id, pdf_modified_at, suggested_questions, indexed_at FROM paper_index_meta WHERE paper_id = ?"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return nil }
+        defer { sqlite3_finalize(stmt) }
+
+        sqlite3_bind_text(stmt, 1, (paperId as NSString).utf8String, -1, nil)
+        guard sqlite3_step(stmt) == SQLITE_ROW else { return nil }
+
+        let pdfModifiedAt = String(cString: sqlite3_column_text(stmt, 1))
+        let questionsStr = String(cString: sqlite3_column_text(stmt, 2))
+        let indexedAt = String(cString: sqlite3_column_text(stmt, 3))
+
+        let questions: [String] = (try? JSONSerialization.jsonObject(with: Data(questionsStr.utf8)) as? [String]) ?? []
+        return IndexMeta(paperId: paperId, pdfModifiedAt: pdfModifiedAt, suggestedQuestions: questions, indexedAt: indexedAt)
+    }
+
+    func deleteIndexMeta(forPaper paperId: String) {
+        guard let db else { return }
+        let sql = "DELETE FROM paper_index_meta WHERE paper_id = ?"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, (paperId as NSString).utf8String, -1, nil)
+        sqlite3_step(stmt)
+    }
+
+    // MARK: - Chat Conversations
+
+    func createConversation(id: String, paperId: String, createdAt: String) {
+        guard let db else { return }
+        let sql = "INSERT INTO chat_conversations (id, paper_id, created_at) VALUES (?, ?, ?)"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+
+        sqlite3_bind_text(stmt, 1, (id as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 2, (paperId as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 3, (createdAt as NSString).utf8String, -1, nil)
+        sqlite3_step(stmt)
+    }
+
+    func loadConversations(forPaper paperId: String) -> [ChatConversation] {
+        guard let db else { return [] }
+        let sql = "SELECT id, paper_id, created_at FROM chat_conversations WHERE paper_id = ? ORDER BY created_at DESC"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+
+        sqlite3_bind_text(stmt, 1, (paperId as NSString).utf8String, -1, nil)
+
+        var conversations: [ChatConversation] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            conversations.append(ChatConversation(
+                id: String(cString: sqlite3_column_text(stmt, 0)),
+                paperId: String(cString: sqlite3_column_text(stmt, 1)),
+                createdAt: String(cString: sqlite3_column_text(stmt, 2))
+            ))
+        }
+        return conversations
+    }
+
+    // MARK: - Chat Messages
+
+    func insertMessage(conversationId: String, role: String, content: String, citations: String?, createdAt: String) {
+        guard let db else { return }
+        let sql = "INSERT INTO chat_messages (conversation_id, role, content, citations, created_at) VALUES (?, ?, ?, ?, ?)"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+
+        sqlite3_bind_text(stmt, 1, (conversationId as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 2, (role as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 3, (content as NSString).utf8String, -1, nil)
+        if let citations {
+            sqlite3_bind_text(stmt, 4, (citations as NSString).utf8String, -1, nil)
+        } else {
+            sqlite3_bind_null(stmt, 4)
+        }
+        sqlite3_bind_text(stmt, 5, (createdAt as NSString).utf8String, -1, nil)
+        sqlite3_step(stmt)
+    }
+
+    func loadMessages(forConversation conversationId: String) -> [ChatMessage] {
+        guard let db else { return [] }
+        let sql = "SELECT id, conversation_id, role, content, citations, created_at FROM chat_messages WHERE conversation_id = ? ORDER BY created_at ASC"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+
+        sqlite3_bind_text(stmt, 1, (conversationId as NSString).utf8String, -1, nil)
+
+        var messages: [ChatMessage] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let citationsStr: String? = sqlite3_column_type(stmt, 4) != SQLITE_NULL ? String(cString: sqlite3_column_text(stmt, 4)) : nil
+            messages.append(ChatMessage(
+                id: Int(sqlite3_column_int64(stmt, 0)),
+                conversationId: String(cString: sqlite3_column_text(stmt, 1)),
+                role: String(cString: sqlite3_column_text(stmt, 2)),
+                content: String(cString: sqlite3_column_text(stmt, 3)),
+                citations: citationsStr,
+                createdAt: String(cString: sqlite3_column_text(stmt, 5))
+            ))
+        }
+        return messages
     }
 
     // MARK: - Row Mapping

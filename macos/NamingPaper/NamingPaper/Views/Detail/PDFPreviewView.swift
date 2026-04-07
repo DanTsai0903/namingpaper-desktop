@@ -10,6 +10,11 @@ struct PDFPreviewView: View {
     var body: some View {
         VStack(spacing: 0) {
             PDFKitView(url: url, zoomLevel: $zoomLevel, currentPage: $currentPage, totalPages: $totalPages)
+                .onReceive(NotificationCenter.default.publisher(for: .navigateToPage)) { notification in
+                    if let page = notification.userInfo?["page"] as? Int {
+                        currentPage = min(page, totalPages)
+                    }
+                }
 
             // Controls bar
             HStack {
@@ -96,6 +101,17 @@ struct PDFKitView: NSViewRepresentable {
         let newScale = CGFloat(zoomLevel)
         if abs(pdfView.scaleFactor - newScale) > 0.01 {
             pdfView.scaleFactor = newScale
+        }
+
+        // Navigate to a specific page if currentPage changed
+        if let doc = pdfView.document,
+           let currentPDFPage = pdfView.currentPage {
+            let visibleIndex = doc.index(for: currentPDFPage)
+            let targetIndex = currentPage - 1
+            if targetIndex != visibleIndex, targetIndex >= 0, targetIndex < doc.pageCount,
+               let targetPage = doc.page(at: targetIndex) {
+                pdfView.go(to: targetPage)
+            }
         }
     }
 

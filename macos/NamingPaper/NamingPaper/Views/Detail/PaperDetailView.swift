@@ -4,6 +4,7 @@ import AppKit
 struct PaperDetailView: View {
     let paper: Paper
     @Environment(LibraryViewModel.self) var viewModel
+    @State private var isChatMode = false
     @State private var showRemoveConfirmation = false
     @State private var showCategoryPicker = false
     @State private var newCategoryName = ""
@@ -28,26 +29,23 @@ struct PaperDetailView: View {
     @State private var editingJournalAbbrev = ""
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Compact metadata + summary at top (scrollable if needed)
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    metadataHeader
-                    summaryCallout
-                }
-                .padding(.horizontal)
-                .padding(.top, 12)
-                .padding(.bottom, 8)
+        Group {
+            if isChatMode {
+                chatModeLayout
+            } else {
+                normalLayout
             }
-            .frame(maxHeight: summaryExpanded || isEditingKeywords || isEditingSummary || isEditingMetadata ? 350 : 180)
-
-            Divider()
-
-            // PDF fills remaining space
-            pdfSection
         }
         .toolbar {
             ToolbarItemGroup {
+                Button {
+                    isChatMode.toggle()
+                } label: {
+                    Label("Chat", systemImage: "bubble.left.and.text.bubble.right")
+                }
+                .disabled(!paper.pdfExists)
+                .help(isChatMode ? "Exit chat mode" : "Chat with this paper")
+
                 Button {
                     openInPreview()
                 } label: {
@@ -412,6 +410,37 @@ struct PaperDetailView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(paper.summary.isEmpty && !isEditingSummary ? Color.secondary.opacity(0.05) : Color.accentColor.opacity(0.05))
             .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+    }
+
+    // MARK: - Layouts
+
+    private var normalLayout: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    metadataHeader
+                    summaryCallout
+                }
+                .padding(.horizontal)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
+            }
+            .frame(maxHeight: summaryExpanded || isEditingKeywords || isEditingSummary || isEditingMetadata ? 350 : 180)
+
+            Divider()
+
+            pdfSection
+        }
+    }
+
+    private var chatModeLayout: some View {
+        HSplitView {
+            pdfSection
+                .frame(minWidth: 300)
+
+            ChatPanelView(paper: paper)
+                .frame(minWidth: 300)
         }
     }
 

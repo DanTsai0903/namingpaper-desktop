@@ -55,6 +55,14 @@
 		A1002E00000000000000002E /* BackupPrefsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2002E00000000000000002E /* BackupPrefsView.swift */; };
 		A1002F00000000000000002F /* SyncPrefsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2002F00000000000000002F /* SyncPrefsView.swift */; };
 		A10030000000000000000030 /* SyncStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20030000000000000000030 /* SyncStatusView.swift */; };
+		A10031000000000000000031 /* ChatModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20031000000000000000031 /* ChatModels.swift */; };
+		A10032000000000000000032 /* ChatAIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20032000000000000000032 /* ChatAIService.swift */; };
+		A10033000000000000000033 /* DocumentIndexingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20033000000000000000033 /* DocumentIndexingService.swift */; };
+		A10034000000000000000034 /* ChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20034000000000000000034 /* ChatViewModel.swift */; };
+		A10035000000000000000035 /* ChatPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20035000000000000000035 /* ChatPanelView.swift */; };
+		A10036000000000000000036 /* MessageBubbleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20036000000000000000036 /* MessageBubbleView.swift */; };
+		A10037000000000000000037 /* MarkdownLatexView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20037000000000000000037 /* MarkdownLatexView.swift */; };
+		A10038000000000000000038 /* Resources in Resources */ = {isa = PBXBuildFile; fileRef = A20038000000000000000038 /* Resources */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -107,6 +115,14 @@
 		A2002E00000000000000002E /* BackupPrefsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupPrefsView.swift; sourceTree = "<group>"; };
 		A2002F00000000000000002F /* SyncPrefsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncPrefsView.swift; sourceTree = "<group>"; };
 		A20030000000000000000030 /* SyncStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncStatusView.swift; sourceTree = "<group>"; };
+		A20031000000000000000031 /* ChatModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatModels.swift; sourceTree = "<group>"; };
+		A20032000000000000000032 /* ChatAIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAIService.swift; sourceTree = "<group>"; };
+		A20033000000000000000033 /* DocumentIndexingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentIndexingService.swift; sourceTree = "<group>"; };
+		A20034000000000000000034 /* ChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
+		A20035000000000000000035 /* ChatPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPanelView.swift; sourceTree = "<group>"; };
+		A20036000000000000000036 /* MessageBubbleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubbleView.swift; sourceTree = "<group>"; };
+		A20037000000000000000037 /* MarkdownLatexView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownLatexView.swift; sourceTree = "<group>"; };
+		A20038000000000000000038 /* Resources */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Resources; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -144,6 +160,7 @@
 				A4000A00000000000000000A /* Utilities */,
 				A2001D0000000000000001D /* Assets.xcassets */,
 				A20029000000000000000029 /* Localizable.xcstrings */,
+				A20038000000000000000038 /* Resources */,
 				A4000B00000000000000000B /* Preview Content */,
 				A20023000000000000000023 /* NamingPaper.entitlements */,
 			);
@@ -182,6 +199,7 @@
 			children = (
 				A20003000000000000000003 /* Paper.swift */,
 				A20004000000000000000004 /* Category.swift */,
+				A20031000000000000000031 /* ChatModels.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -193,6 +211,7 @@
 				A20006000000000000000006 /* SearchViewModel.swift */,
 				A20007000000000000000007 /* AddPaperViewModel.swift */,
 				A20008000000000000000008 /* TabManager.swift */,
+				A20034000000000000000034 /* ChatViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -211,6 +230,7 @@
 				A40010000000000000000010 /* AddPaper */,
 				A40011000000000000000011 /* Preferences */,
 				A40012000000000000000012 /* Onboarding */,
+				A40013000000000000000013 /* Chat */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -227,6 +247,8 @@
 				A2002B00000000000000002B /* BackupScheduler.swift */,
 				A2002C00000000000000002C /* SyncService.swift */,
 				A2002D00000000000000002D /* SharingService.swift */,
+				A20032000000000000000032 /* ChatAIService.swift */,
+				A20033000000000000000033 /* DocumentIndexingService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -315,6 +337,16 @@
 			path = Onboarding;
 			sourceTree = "<group>";
 		};
+		A40013000000000000000013 /* Chat */ = {
+			isa = PBXGroup;
+			children = (
+				A20035000000000000000035 /* ChatPanelView.swift */,
+				A20036000000000000000036 /* MessageBubbleView.swift */,
+				A20037000000000000000037 /* MarkdownLatexView.swift */,
+			);
+			path = Chat;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -343,7 +375,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1500;
-				LastUpgradeCheck = 2630;
+				LastUpgradeCheck = 2640;
 				TargetAttributes = {
 					A50001000000000000000001 = {
 						CreatedOnToolsVersion = 15.0;
@@ -384,6 +416,7 @@
 				A1001D0000000000000001D /* Assets.xcassets in Resources */,
 				A1001E0000000000000001E /* Preview Assets.xcassets in Resources */,
 				A10029000000000000000029 /* Localizable.xcstrings in Resources */,
+				A10038000000000000000038 /* Resources in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -435,6 +468,13 @@
 				A1002E00000000000000002E /* BackupPrefsView.swift in Sources */,
 				A1002F00000000000000002F /* SyncPrefsView.swift in Sources */,
 				A10030000000000000000030 /* SyncStatusView.swift in Sources */,
+				A10031000000000000000031 /* ChatModels.swift in Sources */,
+				A10032000000000000000032 /* ChatAIService.swift in Sources */,
+				A10033000000000000000033 /* DocumentIndexingService.swift in Sources */,
+				A10034000000000000000034 /* ChatViewModel.swift in Sources */,
+				A10035000000000000000035 /* ChatPanelView.swift in Sources */,
+				A10036000000000000000036 /* MessageBubbleView.swift in Sources */,
+				A10037000000000000000037 /* MarkdownLatexView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -446,6 +486,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -477,6 +518,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = TH7R9776S3;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -510,6 +552,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -541,6 +584,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = TH7R9776S3;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -572,7 +616,6 @@
 				CURRENT_PROJECT_VERSION = 6;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"NamingPaper/Preview Content\"";
-				DEVELOPMENT_TEAM = TH7R9776S3;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -603,7 +646,6 @@
 				CURRENT_PROJECT_VERSION = 6;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"NamingPaper/Preview Content\"";
-				DEVELOPMENT_TEAM = TH7R9776S3;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
