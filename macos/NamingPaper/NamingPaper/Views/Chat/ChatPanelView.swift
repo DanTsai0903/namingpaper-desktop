@@ -82,7 +82,7 @@ struct ChatPanelView: View {
             }
             Divider()
             Button("Open AI Settings…") {
-                NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
             }
         } label: {
             HStack(spacing: 4) {
