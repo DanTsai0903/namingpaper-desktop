@@ -8,6 +8,7 @@ struct ChatPanelView: View {
     @State private var savedProviders: [SavedProvider] = []
     @AppStorage("aiProvider") private var activeProvider: String = "ollama"
     @AppStorage("aiModel") private var activeModel: String = ""
+    @Environment(\.openSettings) private var openSettings
 
     init(paper: Paper) {
         self.paper = paper
@@ -82,7 +83,10 @@ struct ChatPanelView: View {
             }
             Divider()
             Button("Open AI Settings…") {
-                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                openSettings()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    NotificationCenter.default.post(name: .openAIProviderSettings, object: nil)
+                }
             }
         } label: {
             HStack(spacing: 4) {

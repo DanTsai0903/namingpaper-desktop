@@ -36,5 +36,12 @@ struct PreferencesView: View {
                 .tag(4)
         }
         .frame(width: 550, height: 450)
+        .onReceive(NotificationCenter.default.publisher(for: .openAIProviderSettings)) { _ in
+            selectedTab = 2
+        }
     }
+}
+
+extension Notification.Name {
+    static let openAIProviderSettings = Notification.Name("openAIProviderSettings")
 }
