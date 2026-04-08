@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="macos/NamingPaper/NamingPaper/Assets.xcassets/AppIcon.appiconset/icon_128x128.png" width="128" alt="NamingPaper icon">
+</p>
+
 # namingpaper
 
 [繁體中文](README.zh-Hant.md)
@@ -99,6 +103,10 @@ Features:
 - Category tree sidebar with smart organization
 - Full-text fuzzy search across titles, authors, and journals
 - Inline PDF preview and editable metadata
+- **Chat with PDFs** — RAG-based document Q&A with markdown and LaTeX rendering
+- Download papers to any folder via toolbar button or right-click menu
+- Backup and restore your library; export/import `.namingpaper` bundles for sharing
+- Multi-language UI — switch between English, 繁體中文, 简体中文, Español, 日本語, 한국어
 - API keys stored in macOS Keychain
 
 ## Paper Library
@@ -115,6 +123,12 @@ namingpaper search --author "Fama" --year 2020-2024
 namingpaper list --category "Finance/Asset Pricing"
 namingpaper info a3f2
 namingpaper remove a3f2 --execute
+
+# Download / export
+namingpaper download a3f2 --output ~/Desktop
+namingpaper download --query "risk factors" --output ~/Desktop
+namingpaper download --category "Finance" --output ~/Desktop
+namingpaper download --all --output ~/Desktop --flat
 ```
 
 Papers are organized into `~/Papers/` (configurable via `NAMINGPAPER_PAPERS_DIR`) with category subfolders.
@@ -148,6 +162,21 @@ Same options as `rename`, plus:
 | `-f, --filter` | Glob pattern filter |
 | `--parallel N` | Concurrent extractions |
 | `--json` | JSON output |
+
+### `namingpaper download`
+
+Export papers from the library to a directory.
+
+| Option | Description |
+| ------ | ----------- |
+| `[IDs...]` | Paper IDs to download |
+| `-o, --output` | Output directory (required) |
+| `-q, --query` | Select papers by search query |
+| `-c, --category` | Download all papers in a category |
+| `--all` | Download every paper in the library |
+| `--flat` | No category subfolders |
+| `--overwrite` | Overwrite existing files |
+| `-x, --execute` | Actually copy (default is dry-run) |
 
 ### Other commands
 
@@ -210,4 +239,4 @@ Originally forked from [DanTsai0903/namingpaper](https://github.com/DanTsai0903/
 
 ## License
 
-MIT
+Apache 2.0

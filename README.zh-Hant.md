@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="macos/NamingPaper/NamingPaper/Assets.xcassets/AppIcon.appiconset/icon_128x128.png" width="128" alt="NamingPaper 圖示">
+</p>
+
 # namingpaper
 
 AI 驅動的學術 PDF 重新命名工具，搭配原生 macOS 應用程式與論文管理庫。
@@ -97,6 +101,10 @@ namingpaper rename paper.pdf -p claude --execute
 - 分類樹側邊欄，智慧整理
 - 跨標題、作者、期刊的全文模糊搜尋
 - 內嵌 PDF 預覽及可編輯的中繼資料
+- **與 PDF 對話** — 基於 RAG 的文件問答，支援 Markdown 與 LaTeX 渲染
+- 透過工具列按鈕或右鍵選單將論文下載至任意資料夾
+- 論文庫備份與還原；匯出／匯入 `.namingpaper` 套件以供分享
+- 多語言介面 — 可在 English、繁體中文、简体中文、Español、日本語、한국어 之間切換
 - API 金鑰安全儲存於 macOS 鑰匙圈
 
 ## 論文管理庫
@@ -113,6 +121,12 @@ namingpaper search --author "Fama" --year 2020-2024
 namingpaper list --category "Finance/Asset Pricing"
 namingpaper info a3f2
 namingpaper remove a3f2 --execute
+
+# 下載 / 匯出
+namingpaper download a3f2 --output ~/Desktop
+namingpaper download --query "risk factors" --output ~/Desktop
+namingpaper download --category "Finance" --output ~/Desktop
+namingpaper download --all --output ~/Desktop --flat
 ```
 
 論文預設存放於 `~/Papers/`（可透過 `NAMINGPAPER_PAPERS_DIR` 設定），並以分類子資料夾整理。
@@ -146,6 +160,21 @@ namingpaper remove a3f2 --execute
 | `-f, --filter` | Glob 模式篩選 |
 | `--parallel N` | 並行擷取數量 |
 | `--json` | JSON 輸出 |
+
+### `namingpaper download`
+
+將論文從管理庫匯出至指定目錄。
+
+| 選項 | 說明 |
+| ---- | ---- |
+| `[IDs...]` | 要下載的論文 ID |
+| `-o, --output` | 輸出目錄（必填） |
+| `-q, --query` | 以搜尋關鍵字篩選論文 |
+| `-c, --category` | 下載某分類的所有論文 |
+| `--all` | 下載庫中所有論文 |
+| `--flat` | 不建立分類子資料夾 |
+| `--overwrite` | 覆寫已存在的檔案 |
+| `-x, --execute` | 實際執行複製（預設為模擬執行） |
 
 ### 其他指令
 
@@ -208,4 +237,4 @@ uv run pytest -v
 
 ## 授權條款
 
-MIT
+Apache 2.0
