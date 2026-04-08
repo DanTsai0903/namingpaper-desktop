@@ -9,6 +9,7 @@ actor ChatAIService {
     }
 
     private let config: ProviderConfig
+    private var unloadTask: Task<Void, Never>?
 
     init(config: ProviderConfig) {
         self.config = config
@@ -21,9 +22,11 @@ actor ChatAIService {
         case "ollama":
             return try await ollamaChat(systemPrompt: systemPrompt, messages: messages)
         case "omlx":
-            return try await openAICompatibleChat(systemPrompt: systemPrompt, messages: messages, baseURL: config.baseURL.isEmpty ? "http://localhost:8000/v1" : config.baseURL)
+            let result = try await openAICompatibleChat(systemPrompt: systemPrompt, messages: messages, baseURL: config.baseURL.isEmpty ? "http://localhost:8000/v1" : config.baseURL)
+            scheduleOMLXUnload()
+            return result
         case "lmstudio":
-            return try await openAICompatibleChat(systemPrompt: systemPrompt, messages: messages, baseURL: config.baseURL.isEmpty ? "http://localhost:1234/v1" : config.baseURL)
+            return try await openAICompatibleChat(systemPrompt: systemPrompt, messages: messages, baseURL: config.baseURL.isEmpty ? "http://localhost:1234/v1" : config.baseURL, ttl: 300)
         case "openai":
             return try await openAICompatibleChat(systemPrompt: systemPrompt, messages: messages, baseURL: "https://api.openai.com/v1")
         case "gemini":
@@ -42,9 +45,11 @@ actor ChatAIService {
         case "ollama":
             return try await ollamaEmbed(texts: texts)
         case "omlx":
-            return try await openAICompatibleEmbed(texts: texts, baseURL: config.baseURL.isEmpty ? "http://localhost:8000/v1" : config.baseURL)
+            let result = try await openAICompatibleEmbed(texts: texts, baseURL: config.baseURL.isEmpty ? "http://localhost:8000/v1" : config.baseURL)
+            scheduleOMLXUnload()
+            return result
         case "lmstudio":
-            return try await openAICompatibleEmbed(texts: texts, baseURL: config.baseURL.isEmpty ? "http://localhost:1234/v1" : config.baseURL)
+            return try await openAICompatibleEmbed(texts: texts, baseURL: config.baseURL.isEmpty ? "http://localhost:1234/v1" : config.baseURL, ttl: 300)
         case "openai":
             return try await openAICompatibleEmbed(texts: texts, baseURL: "https://api.openai.com/v1")
         case "gemini":
@@ -70,7 +75,8 @@ actor ChatAIService {
         let body: [String: Any] = [
             "model": config.model.isEmpty ? "qwen3:8b" : config.model,
             "messages": msgs,
-            "stream": false
+            "stream": false,
+            "keep_alive": 300
         ]
 
         let data = try await post(url: url, body: body)
@@ -88,7 +94,8 @@ actor ChatAIService {
 
         let body: [String: Any] = [
             "model": config.model.isEmpty ? "qwen3:8b" : config.model,
-            "input": texts
+            "input": texts,
+            "keep_alive": 300
         ]
 
         let data = try await post(url: url, body: body)
@@ -101,7 +108,7 @@ actor ChatAIService {
 
     // MARK: - OpenAI-compatible (OpenAI, LM Studio, oMLX)
 
-    private func openAICompatibleChat(systemPrompt: String, messages: [(role: String, content: String)], baseURL: String) async throws -> String {
+    private func openAICompatibleChat(systemPrompt: String, messages: [(role: String, content: String)], baseURL: String, ttl: Int? = nil) async throws -> String {
         let url = URL(string: "\(baseURL)/chat/completions")!
 
         var msgs: [[String: String]] = [["role": "system", "content": systemPrompt]]
@@ -109,10 +116,11 @@ actor ChatAIService {
             msgs.append(["role": m.role, "content": m.content])
         }
 
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "model": config.model,
             "messages": msgs
         ]
+        if let ttl { body["ttl"] = ttl }
 
         let data = try await post(url: url, body: body, authHeader: apiAuthHeader())
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -125,13 +133,14 @@ actor ChatAIService {
         return content
     }
 
-    private func openAICompatibleEmbed(texts: [String], baseURL: String) async throws -> [[Float]] {
+    private func openAICompatibleEmbed(texts: [String], baseURL: String, ttl: Int? = nil) async throws -> [[Float]] {
         let url = URL(string: "\(baseURL)/embeddings")!
 
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "model": config.model,
             "input": texts
         ]
+        if let ttl { body["ttl"] = ttl }
 
         let data = try await post(url: url, body: body, authHeader: apiAuthHeader())
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -223,6 +232,34 @@ actor ChatAIService {
             throw ChatAIError.invalidResponse
         }
         return text
+    }
+
+    // MARK: - oMLX Model TTL
+
+    /// Schedules an unload of the oMLX model after 300 seconds of inactivity.
+    /// Each call resets the timer.
+    private func scheduleOMLXUnload() {
+        unloadTask?.cancel()
+        unloadTask = Task {
+            try? await Task.sleep(nanoseconds: 300 * 1_000_000_000)
+            guard !Task.isCancelled else { return }
+            unloadOMLXModel()
+        }
+    }
+
+    private func unloadOMLXModel() {
+        let base = config.baseURL.isEmpty ? "http://localhost:8000/v1" : config.baseURL
+        // oMLX uses the short model name (last path component)
+        let shortName = config.model.split(separator: "/").last.map(String.init) ?? config.model
+        guard let url = URL(string: "\(base)/models/\(shortName)/unload") else { return }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        if let auth = apiAuthHeader() {
+            request.setValue(auth, forHTTPHeaderField: "Authorization")
+        }
+        // Fire and forget
+        Task.detached { try? await URLSession.shared.data(for: request) }
     }
 
     // MARK: - HTTP Helpers

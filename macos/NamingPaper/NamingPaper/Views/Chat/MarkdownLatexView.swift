@@ -44,7 +44,12 @@ struct MarkdownLatexView: NSViewRepresentable {
 
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
             if navigationAction.navigationType == .linkActivated, let url = navigationAction.request.url {
-                NSWorkspace.shared.open(url)
+                if url.scheme == "namingpaper", url.host == "page",
+                   let pageStr = url.pathComponents.last, let page = Int(pageStr) {
+                    NotificationCenter.default.post(name: .navigateToPage, object: nil, userInfo: ["page": page])
+                } else {
+                    NSWorkspace.shared.open(url)
+                }
                 decisionHandler(.cancel)
             } else {
                 decisionHandler(.allow)
@@ -58,6 +63,14 @@ struct MarkdownLatexView: NSViewRepresentable {
         // JSON-encode the content so it's safe to embed in JS
         let jsonData = try! JSONEncoder().encode(content)
         let jsonString = String(data: jsonData, encoding: .utf8)!
+
+        // Regex patterns for citation matching — use raw strings to avoid Swift escape issues
+        // Match [p.3], [p. 3], [pp.3-5], [pp. 3-5] with brackets
+        let citeBracketPattern = #"\[pp?\.\s*(\d+)(?:\s*[-–]\s*(\d+))?\]"#
+        // Match (p.3), (p. 525), (pp. 3-5) with parentheses
+        let citeParenPattern = #"\(pp?\.\s*(\d+)(?:\s*[-–]\s*(\d+))?\)"#
+        // Match [page 3] or [Page 3]
+        let citeWordPattern = #"\[page\s+(\d+)\]"#
 
         // Read bundled JS/CSS inline so we don't depend on file:// URL loading
         let katexCSS = readBundledFile("Resources/katex/katex.min.css") ?? ""
@@ -125,6 +138,23 @@ struct MarkdownLatexView: NSViewRepresentable {
                 color: #aaa;
             }
             a { color: #5ac8c8; }
+            a.citation {
+                display: inline-flex;
+                align-items: center;
+                gap: 2px;
+                font-size: 10px;
+                font-weight: 600;
+                padding: 1px 5px;
+                background: rgba(90,200,200,0.15);
+                color: #5ac8c8 !important;
+                border-radius: 4px;
+                text-decoration: none;
+                cursor: pointer;
+                vertical-align: super;
+                line-height: 1;
+                margin: 0 1px;
+            }
+            a.citation:hover { background: rgba(90,200,200,0.3); }
 
             @media (prefers-color-scheme: light) {
                 body { color: #1a1a1a; }
@@ -195,12 +225,29 @@ struct MarkdownLatexView: NSViewRepresentable {
                 html = html.replace('%%IMATH_' + j + '%%', rendered);
             }
 
+            // Convert citation patterns into clickable superscript badges
+            function citeBadge(match, p1) {
+                return '<a class="citation" href="namingpaper://page/' + p1 + '">' + '\\u2197\\u00A0' + p1 + '</a>';
+            }
+            html = html.replace(new RegExp(\(Self.jsStringLiteral(citeBracketPattern)), 'gi'), citeBadge);
+            html = html.replace(new RegExp(\(Self.jsStringLiteral(citeParenPattern)), 'gi'), citeBadge);
+            html = html.replace(new RegExp(\(Self.jsStringLiteral(citeWordPattern)), 'gi'), citeBadge);
+
             document.getElementById('content').innerHTML = html;
         })();
         </script>
         </body>
         </html>
         """
+    }
+
+    /// Converts a Swift string into a single-quoted JS string literal,
+    /// escaping backslashes and single quotes so the regex pattern survives intact.
+    private static func jsStringLiteral(_ s: String) -> String {
+        let escaped = s
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "'", with: "\\'")
+        return "'\(escaped)'"
     }
 
     private static func readBundledFile(_ relativePath: String) -> String? {

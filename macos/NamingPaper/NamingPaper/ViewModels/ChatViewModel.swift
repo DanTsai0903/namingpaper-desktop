@@ -149,9 +149,17 @@ class ChatViewModel {
 
         prompt += """
 
-        \nBelow are relevant excerpts from the paper. Use them to answer the user's question accurately.
-        IMPORTANT: When referencing specific content, cite the page number using the format [p.N] (e.g., [p.3]).
-        For page ranges, use [pp. N-M]. Always include citations when making specific claims.
+        \nBelow are relevant excerpts from the paper. Each excerpt is prefixed with a PDF page tag like [Page 3].
+        Use them to answer the user's question accurately.
+
+        CITATION RULES (you MUST follow these strictly):
+        - Every claim or fact you state MUST include a citation using the format [p.N], where N is the PDF page number from the [Page N] tag at the start of each excerpt.
+        - IMPORTANT: Use the PDF page numbers from the [Page N] tags, NOT any printed journal page numbers that appear in the text content.
+        - For example, if an excerpt starts with [Page 5], cite it as [p.5] — even if the text mentions "page 525" as a journal page number.
+        - Place the citation inline right after the claim: "The model achieves 95% accuracy [p.5]."
+        - For ranges across excerpts: [pp.3-5]
+        - Multiple citations: "Results show X [p.3] and Y [p.7]."
+        - Do NOT omit citations. Every specific claim needs one.
 
         --- PAPER EXCERPTS ---
         \(contextChunks)

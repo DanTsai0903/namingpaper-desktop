@@ -102,6 +102,7 @@ class LMStudioProvider(AIProvider):
             ],
             "max_tokens": 2048,
             "stream": False,
+            "ttl": 300,
         }
 
         result = await self._call_lmstudio(payload)
@@ -116,6 +117,7 @@ class LMStudioProvider(AIProvider):
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": 2048,
             "stream": False,
+            "ttl": 300,
         }
 
         result = await self._call_lmstudio(payload)
@@ -135,6 +137,7 @@ class LMStudioProvider(AIProvider):
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": 2048,
             "stream": False,
+            "ttl": 300,
         }
 
         result = await self._call_lmstudio(payload)
