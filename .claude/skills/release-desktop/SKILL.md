@@ -117,6 +117,11 @@ Follow these steps to release a new version of the NamingPaper macOS desktop app
 
     Confirm all 3 assets are present: `NamingPaper.zip`, `appcast.xml`, `NamingPaper-vX.Y.Z.dmg`.
 
+3. **Write release notes** for the GitHub release:
+   - Review all commits since the previous release tag (`git log --oneline vPREV..vX.Y.Z` and `git diff --stat vPREV..vX.Y.Z -- macos/NamingPaper/NamingPaper/`)
+   - Write a "What's New in vX.Y.Z" section highlighting new features, improvements, and bug fixes
+   - Update the release body using `gh release edit vX.Y.Z --repo DanTsai0903/namingpaper-desktop --notes "..."`
+
 ## Important
 
 - Always confirm the version number with the user before starting.

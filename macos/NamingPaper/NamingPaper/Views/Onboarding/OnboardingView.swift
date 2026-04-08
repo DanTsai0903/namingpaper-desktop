@@ -136,9 +136,24 @@ struct OnboardingView: View {
                     description: "Create categories to group related papers"
                 )
                 featureCard(
+                    icon: "bubble.left.and.text.bubble.right",
+                    title: "Chat with PDF",
+                    description: "Ask questions about any paper and get AI-powered answers with context"
+                )
+                featureCard(
                     icon: "magnifyingglass",
                     title: "Search",
                     description: "Search across titles, authors, journals, and keywords"
+                )
+                featureLinkCard(
+                    icon: "cpu",
+                    title: "Local AI Providers",
+                    description: "Run AI on your Mac — no API key needed. We recommend oMLX for best Apple Silicon performance",
+                    links: [
+                        ("oMLX (Recommended)", "https://omlx.ai"),
+                        ("Ollama", "https://ollama.com"),
+                        ("LM Studio", "https://lmstudio.ai"),
+                    ]
                 )
                 featureCard(
                     icon: "terminal",
@@ -171,6 +186,33 @@ struct OnboardingView: View {
                 Text(description)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(.quaternary.opacity(0.5))
+        .cornerRadius(8)
+    }
+
+    private func featureLinkCard(icon: String, title: String, description: String, links: [(label: String, url: String)]) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundColor(.accentColor)
+                .frame(width: 28, alignment: .center)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .fontWeight(.medium)
+                Text(description)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                HStack(spacing: 8) {
+                    ForEach(Array(links.enumerated()), id: \.offset) { _, link in
+                        Link(link.label, destination: URL(string: link.url)!)
+                            .font(.caption)
+                    }
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
