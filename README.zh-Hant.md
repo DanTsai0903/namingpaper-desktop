@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="macos/NamingPaper/NamingPaper/Assets.xcassets/AppIcon.appiconset/icon_128x128.png" width="128" alt="NamingPaper 圖示">
+  <img src="macos/NamingPaper/NamingPaper/Assets.xcassets/AppIcon.appiconset/icon_512x512.png" width="128" alt="NamingPaper 圖示">
 </p>
 
 # namingpaper
