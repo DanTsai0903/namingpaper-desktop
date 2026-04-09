@@ -1,18 +1,36 @@
 import SwiftUI
+import AppKit
 
 struct MessageBubbleView: View {
     let message: ChatViewModel.DisplayMessage
+    let viewModel: ChatViewModel
+    let onEdit: (String) -> Void
     @State private var webViewHeight: CGFloat = 100
+    @State private var isHovering = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
             if message.isUser {
                 Spacer(minLength: 60)
-                userBubble
+                VStack(alignment: .trailing, spacing: 4) {
+                    userBubble
+                    if isHovering {
+                        userActions
+                    }
+                }
             } else {
-                assistantBubble
+                VStack(alignment: .leading, spacing: 4) {
+                    assistantBubble
+                    if isHovering {
+                        assistantActions
+                            .padding(.leading, 28) // align under text, past sparkle icon
+                    }
+                }
                 Spacer(minLength: 60)
             }
+        }
+        .onHover { hovering in
+            isHovering = hovering
         }
     }
 
@@ -39,6 +57,76 @@ struct MessageBubbleView: View {
                 .background(Color(nsColor: .controlBackgroundColor))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
         }
+    }
+
+    // MARK: - Action toolbars
+
+    private var userActions: some View {
+        HStack(spacing: 4) {
+            actionButton(systemImage: "doc.on.doc", help: "Copy") {
+                copyToClipboard(message.content)
+            }
+            actionButton(systemImage: "pencil", help: "Edit") {
+                Task {
+                    if let content = await viewModel.editUserMessage(id: message.id) {
+                        onEdit(content)
+                    }
+                }
+            }
+        }
+    }
+
+    private var assistantActions: some View {
+        HStack(spacing: 4) {
+            actionButton(systemImage: "doc.on.doc", help: "Copy") {
+                copyToClipboard(message.content)
+            }
+            Menu {
+                Button {
+                    Task { await viewModel.regenerateAssistantMessage(id: message.id, mode: .same) }
+                } label: {
+                    Label("Try again", systemImage: "arrow.clockwise")
+                }
+                Button {
+                    Task { await viewModel.regenerateAssistantMessage(id: message.id, mode: .bullets) }
+                } label: {
+                    Label("Convert to bullets", systemImage: "list.bullet")
+                }
+                Button {
+                    Task { await viewModel.regenerateAssistantMessage(id: message.id, mode: .paragraphs) }
+                } label: {
+                    Label("Rewrite as paragraphs", systemImage: "text.alignleft")
+                }
+            } label: {
+                Image(systemName: "arrow.clockwise")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 22, height: 22)
+                    .contentShape(Rectangle())
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help("Re-respond")
+        }
+    }
+
+    private func actionButton(systemImage: String, help: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(width: 22, height: 22)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(help)
+    }
+
+    private func copyToClipboard(_ text: String) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
     }
 }
 

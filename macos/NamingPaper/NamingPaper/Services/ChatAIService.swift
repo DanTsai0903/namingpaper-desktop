@@ -9,7 +9,6 @@ actor ChatAIService {
     }
 
     private let config: ProviderConfig
-    private var unloadTask: Task<Void, Never>?
 
     init(config: ProviderConfig) {
         self.config = config
@@ -20,13 +19,17 @@ actor ChatAIService {
     func chatCompletion(systemPrompt: String, messages: [(role: String, content: String)]) async throws -> String {
         switch config.provider {
         case "ollama":
-            return try await ollamaChat(systemPrompt: systemPrompt, messages: messages)
+            return try await ollamaChat(systemPrompt: systemPrompt, messages: messages, keepAlive: 300)
         case "omlx":
-            let result = try await openAICompatibleChat(systemPrompt: systemPrompt, messages: messages, baseURL: config.baseURL.isEmpty ? "http://localhost:8000/v1" : config.baseURL)
-            scheduleOMLXUnload()
-            return result
+            setOMLXTTL(seconds: 300)
+            return try await openAICompatibleChat(systemPrompt: systemPrompt, messages: messages, baseURL: config.baseURL.isEmpty ? "http://localhost:8000/v1" : config.baseURL)
         case "lmstudio":
-            return try await openAICompatibleChat(systemPrompt: systemPrompt, messages: messages, baseURL: config.baseURL.isEmpty ? "http://localhost:1234/v1" : config.baseURL, ttl: 300)
+            return try await openAICompatibleChat(
+                systemPrompt: systemPrompt,
+                messages: messages,
+                baseURL: config.baseURL.isEmpty ? "http://localhost:1234/v1" : config.baseURL,
+                ttl: 300
+            )
         case "openai":
             return try await openAICompatibleChat(systemPrompt: systemPrompt, messages: messages, baseURL: "https://api.openai.com/v1")
         case "gemini":
@@ -43,13 +46,16 @@ actor ChatAIService {
     func embed(texts: [String]) async throws -> [[Float]] {
         switch config.provider {
         case "ollama":
-            return try await ollamaEmbed(texts: texts)
+            return try await ollamaEmbed(texts: texts, keepAlive: 300)
         case "omlx":
-            let result = try await openAICompatibleEmbed(texts: texts, baseURL: config.baseURL.isEmpty ? "http://localhost:8000/v1" : config.baseURL)
-            scheduleOMLXUnload()
-            return result
+            setOMLXTTL(seconds: 300)
+            return try await openAICompatibleEmbed(texts: texts, baseURL: config.baseURL.isEmpty ? "http://localhost:8000/v1" : config.baseURL)
         case "lmstudio":
-            return try await openAICompatibleEmbed(texts: texts, baseURL: config.baseURL.isEmpty ? "http://localhost:1234/v1" : config.baseURL, ttl: 300)
+            return try await openAICompatibleEmbed(
+                texts: texts,
+                baseURL: config.baseURL.isEmpty ? "http://localhost:1234/v1" : config.baseURL,
+                ttl: 300
+            )
         case "openai":
             return try await openAICompatibleEmbed(texts: texts, baseURL: "https://api.openai.com/v1")
         case "gemini":
@@ -63,7 +69,7 @@ actor ChatAIService {
 
     // MARK: - Ollama
 
-    private func ollamaChat(systemPrompt: String, messages: [(role: String, content: String)]) async throws -> String {
+    private func ollamaChat(systemPrompt: String, messages: [(role: String, content: String)], keepAlive: Int? = nil) async throws -> String {
         let base = config.baseURL.isEmpty ? "http://localhost:11434" : config.baseURL
         let url = URL(string: "\(base)/api/chat")!
 
@@ -72,12 +78,14 @@ actor ChatAIService {
             msgs.append(["role": m.role, "content": m.content])
         }
 
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "model": config.model.isEmpty ? "qwen3:8b" : config.model,
             "messages": msgs,
-            "stream": false,
-            "keep_alive": 300
+            "stream": false
         ]
+        if let keepAlive {
+            body["keep_alive"] = keepAlive
+        }
 
         let data = try await post(url: url, body: body)
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -85,18 +93,20 @@ actor ChatAIService {
               let content = message["content"] as? String else {
             throw ChatAIError.invalidResponse
         }
-        return content
+        return stripThinkingBlocks(content)
     }
 
-    private func ollamaEmbed(texts: [String]) async throws -> [[Float]] {
+    private func ollamaEmbed(texts: [String], keepAlive: Int? = nil) async throws -> [[Float]] {
         let base = config.baseURL.isEmpty ? "http://localhost:11434" : config.baseURL
         let url = URL(string: "\(base)/api/embed")!
 
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "model": config.model.isEmpty ? "qwen3:8b" : config.model,
-            "input": texts,
-            "keep_alive": 300
+            "input": texts
         ]
+        if let keepAlive {
+            body["keep_alive"] = keepAlive
+        }
 
         let data = try await post(url: url, body: body)
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -120,7 +130,11 @@ actor ChatAIService {
             "model": config.model,
             "messages": msgs
         ]
-        if let ttl { body["ttl"] = ttl }
+        if let ttl {
+            // LM Studio's OpenAI-compatible API accepts a `ttl` field that controls
+            // how long to keep the model loaded after this request finishes.
+            body["ttl"] = ttl
+        }
 
         let data = try await post(url: url, body: body, authHeader: apiAuthHeader())
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -130,7 +144,7 @@ actor ChatAIService {
               let content = message["content"] as? String else {
             throw ChatAIError.invalidResponse
         }
-        return content
+        return stripThinkingBlocks(content)
     }
 
     private func openAICompatibleEmbed(texts: [String], baseURL: String, ttl: Int? = nil) async throws -> [[Float]] {
@@ -140,7 +154,9 @@ actor ChatAIService {
             "model": config.model,
             "input": texts
         ]
-        if let ttl { body["ttl"] = ttl }
+        if let ttl {
+            body["ttl"] = ttl
+        }
 
         let data = try await post(url: url, body: body, authHeader: apiAuthHeader())
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -180,7 +196,7 @@ actor ChatAIService {
               let text = parts.first?["text"] as? String else {
             throw ChatAIError.invalidResponse
         }
-        return text
+        return stripThinkingBlocks(text)
     }
 
     private func geminiEmbed(texts: [String]) async throws -> [[Float]] {
@@ -231,35 +247,50 @@ actor ChatAIService {
               let text = first["text"] as? String else {
             throw ChatAIError.invalidResponse
         }
-        return text
+        return stripThinkingBlocks(text)
     }
 
     // MARK: - oMLX Model TTL
 
-    /// Schedules an unload of the oMLX model after 300 seconds of inactivity.
-    /// Each call resets the timer.
-    private func scheduleOMLXUnload() {
-        unloadTask?.cancel()
-        unloadTask = Task {
-            try? await Task.sleep(nanoseconds: 300 * 1_000_000_000)
-            guard !Task.isCancelled else { return }
-            unloadOMLXModel()
-        }
-    }
-
-    private func unloadOMLXModel() {
-        let base = config.baseURL.isEmpty ? "http://localhost:8000/v1" : config.baseURL
-        // oMLX uses the short model name (last path component)
+    /// Configure oMLX to auto-unload the model after `seconds` of idle time.
+    /// Sent fire-and-forget BEFORE each chat/embed request via the admin API:
+    ///   PUT /admin/api/models/{model_id}/settings  {"ttl_seconds": N}
+    /// oMLX itself tracks last access and unloads when the idle window expires.
+    private func setOMLXTTL(seconds: Int) {
+        // Strip `/v1` (or any trailing path) from the configured base URL to reach
+        // the admin API root (admin endpoints live alongside `/v1`, not inside it).
+        let configured = config.baseURL.isEmpty ? "http://localhost:8000/v1" : config.baseURL
+        guard let v1URL = URL(string: configured) else { return }
+        var components = URLComponents()
+        components.scheme = v1URL.scheme
+        components.host = v1URL.host
+        components.port = v1URL.port
+        // oMLX uses the short model name (last path component) in URLs
         let shortName = config.model.split(separator: "/").last.map(String.init) ?? config.model
-        guard let url = URL(string: "\(base)/models/\(shortName)/unload") else { return }
+        components.path = "/admin/api/models/\(shortName)/settings"
+        guard let url = components.url else { return }
+
+        let body: [String: Any] = ["ttl_seconds": seconds]
+        guard let data = try? JSONSerialization.data(withJSONObject: body) else { return }
 
         var request = URLRequest(url: url)
-        request.httpMethod = "POST"
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if let auth = apiAuthHeader() {
             request.setValue(auth, forHTTPHeaderField: "Authorization")
         }
-        // Fire and forget
+        request.httpBody = data
+        // Fire and forget — the TTL update is idempotent and we don't want to
+        // block the chat request waiting for it.
         Task.detached { try? await URLSession.shared.data(for: request) }
+    }
+
+    // MARK: - Response Cleaning
+
+    /// Strip `<think>…</think>` blocks that reasoning models (e.g. Qwen3, DeepSeek) emit.
+    private nonisolated func stripThinkingBlocks(_ text: String) -> String {
+        text.replacingOccurrences(of: #"<think>[\s\S]*?</think>\s*"#, with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     // MARK: - HTTP Helpers
@@ -276,7 +307,11 @@ actor ChatAIService {
             request.setValue(auth, forHTTPHeaderField: "Authorization")
         }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        request.timeoutInterval = 120
+        // Local reasoning models (oMLX/Ollama/LM Studio with Qwen3, DeepSeek, etc.) can take
+        // several minutes to produce a long response with a <think> block. The response is
+        // non-streaming, so the entire output must arrive before the first byte — keep this
+        // generous so summaries from small local models don't time out.
+        request.timeoutInterval = 600
 
         let (data, response) = try await URLSession.shared.data(for: request)
         if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode >= 400 {

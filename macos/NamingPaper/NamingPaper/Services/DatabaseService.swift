@@ -892,11 +892,12 @@ actor DatabaseService {
 
     // MARK: - Chat Messages
 
-    func insertMessage(conversationId: String, role: String, content: String, citations: String?, createdAt: String) {
-        guard let db else { return }
+    @discardableResult
+    func insertMessage(conversationId: String, role: String, content: String, citations: String?, createdAt: String) -> Int {
+        guard let db else { return 0 }
         let sql = "INSERT INTO chat_messages (conversation_id, role, content, citations, created_at) VALUES (?, ?, ?, ?, ?)"
         var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return 0 }
         defer { sqlite3_finalize(stmt) }
 
         sqlite3_bind_text(stmt, 1, (conversationId as NSString).utf8String, -1, nil)
@@ -908,6 +909,17 @@ actor DatabaseService {
             sqlite3_bind_null(stmt, 4)
         }
         sqlite3_bind_text(stmt, 5, (createdAt as NSString).utf8String, -1, nil)
+        sqlite3_step(stmt)
+        return Int(sqlite3_last_insert_rowid(db))
+    }
+
+    func deleteMessage(id: Int) {
+        guard let db else { return }
+        let sql = "DELETE FROM chat_messages WHERE id = ?"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_int64(stmt, 1, Int64(id))
         sqlite3_step(stmt)
     }
 

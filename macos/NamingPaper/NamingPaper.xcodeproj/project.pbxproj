@@ -63,6 +63,7 @@
 		A10036000000000000000036 /* MessageBubbleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20036000000000000000036 /* MessageBubbleView.swift */; };
 		A10037000000000000000037 /* MarkdownLatexView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20037000000000000000037 /* MarkdownLatexView.swift */; };
 		A10038000000000000000038 /* Resources in Resources */ = {isa = PBXBuildFile; fileRef = A20038000000000000000038 /* Resources */; };
+		A10039000000000000000039 /* LocalAIProvidersTutorialView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20039000000000000000039 /* LocalAIProvidersTutorialView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -123,6 +124,7 @@
 		A20036000000000000000036 /* MessageBubbleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubbleView.swift; sourceTree = "<group>"; };
 		A20037000000000000000037 /* MarkdownLatexView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownLatexView.swift; sourceTree = "<group>"; };
 		A20038000000000000000038 /* Resources */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Resources; sourceTree = "<group>"; };
+		A20039000000000000000039 /* LocalAIProvidersTutorialView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalAIProvidersTutorialView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -333,6 +335,7 @@
 			isa = PBXGroup;
 			children = (
 				A20027000000000000000027 /* OnboardingView.swift */,
+				A20039000000000000000039 /* LocalAIProvidersTutorialView.swift */,
 			);
 			path = Onboarding;
 			sourceTree = "<group>";
@@ -475,6 +478,7 @@
 				A10035000000000000000035 /* ChatPanelView.swift in Sources */,
 				A10036000000000000000036 /* MessageBubbleView.swift in Sources */,
 				A10037000000000000000037 /* MarkdownLatexView.swift in Sources */,
+				A10039000000000000000039 /* LocalAIProvidersTutorialView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

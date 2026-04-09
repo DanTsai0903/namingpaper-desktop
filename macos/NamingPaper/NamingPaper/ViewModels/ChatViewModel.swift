@@ -16,9 +16,16 @@ class ChatViewModel {
     private var aiService: ChatAIService?
     private let indexingService = DocumentIndexingService()
     private let db = DatabaseService.shared
+    private var currentTask: Task<Void, Never>?
+
+    enum RegenerateMode {
+        case same
+        case bullets
+        case paragraphs
+    }
 
     struct DisplayMessage: Identifiable {
-        let id: String
+        var id: String
         let role: String
         let content: String
         let timestamp: Date
@@ -64,34 +71,154 @@ class ChatViewModel {
         }
 
         // Add user message
-        let userMsg = DisplayMessage(id: UUID().uuidString, role: "user", content: trimmed, timestamp: Date())
+        let userId = await persistMessage(role: "user", content: trimmed)
+        let userMsg = DisplayMessage(
+            id: userId.map { String($0) } ?? UUID().uuidString,
+            role: "user",
+            content: trimmed,
+            timestamp: Date()
+        )
         messages.append(userMsg)
-        await persistMessage(role: "user", content: trimmed)
 
         isLoading = true
         errorMessage = nil
 
-        do {
-            // Retrieve relevant chunks
-            let results = await indexingService.searchSimilar(query: trimmed, paperId: paper.id, aiService: aiService)
-            let contextChunks = results.map { "[Page \($0.chunk.pageNumber)] \($0.chunk.text)" }.joined(separator: "\n\n---\n\n")
+        let task = Task { [weak self] in
+            guard let self else { return }
+            defer { self.isLoading = false }
+            do {
+                // Retrieve relevant chunks
+                let results = await self.indexingService.searchSimilar(query: trimmed, paperId: self.paper.id, aiService: aiService)
+                try Task.checkCancellation()
+                let contextChunks = results.map { "[Page \($0.chunk.pageNumber)] \($0.chunk.text)" }.joined(separator: "\n\n---\n\n")
 
-            // Build conversation history for API
-            let historyMessages = messages.map { (role: $0.role, content: $0.content) }
+                // Build conversation history for API
+                let historyMessages = self.messages.map { (role: $0.role, content: $0.content) }
 
-            let systemPrompt = buildSystemPrompt(contextChunks: contextChunks)
-            let response = try await aiService.chatCompletion(systemPrompt: systemPrompt, messages: historyMessages)
+                let systemPrompt = self.buildSystemPrompt(contextChunks: contextChunks)
+                let response = try await aiService.chatCompletion(systemPrompt: systemPrompt, messages: historyMessages)
+                try Task.checkCancellation()
 
-            let assistantMsg = DisplayMessage(id: UUID().uuidString, role: "assistant", content: response, timestamp: Date())
-            messages.append(assistantMsg)
-            await persistMessage(role: "assistant", content: response)
-        } catch {
-            errorMessage = error.localizedDescription
+                // Fallback: small local models often ignore the inline-citation rule.
+                let retrievedChunks = results.map { (page: $0.chunk.pageNumber, text: $0.chunk.text) }
+                let finalResponse = Self.ensureCitations(response: response, retrievedChunks: retrievedChunks)
+
+                let assistantId = await self.persistMessage(role: "assistant", content: finalResponse)
+                let assistantMsg = DisplayMessage(
+                    id: assistantId.map { String($0) } ?? UUID().uuidString,
+                    role: "assistant",
+                    content: finalResponse,
+                    timestamp: Date()
+                )
+                self.messages.append(assistantMsg)
+            } catch is CancellationError {
+                // Silent — user requested stop
+            } catch let error as URLError where error.code == .cancelled {
+                // Silent — URLSession cancellation
+            } catch {
+                self.errorMessage = error.localizedDescription
+            }
         }
-
-        isLoading = false
+        currentTask = task
+        await task.value
+        currentTask = nil
         // Clear suggested questions after first interaction
         suggestedQuestions = []
+    }
+
+    // MARK: - Stop / Edit / Regenerate
+
+    /// Cancel the in-flight chat request, if any.
+    func stopGeneration() {
+        currentTask?.cancel()
+    }
+
+    /// Pull a user message back into the input field for editing. Removes the message
+    /// and everything after it from both the UI and the database. Returns the original
+    /// content so the caller can populate the input field.
+    func editUserMessage(id: String) async -> String? {
+        guard let idx = messages.firstIndex(where: { $0.id == id }),
+              messages[idx].role == "user" else { return nil }
+        let content = messages[idx].content
+        let removed = Array(messages[idx...])
+        messages.removeSubrange(idx...)
+        for msg in removed {
+            if let dbId = Int(msg.id) {
+                await db.deleteMessage(id: dbId)
+            }
+        }
+        return content
+    }
+
+    /// Regenerate an assistant message in place. The original assistant message is
+    /// removed from both UI and DB before generating a new one.
+    /// - `same`: re-runs the previous user query (with retrieval)
+    /// - `bullets` / `paragraphs`: transforms the existing response via a focused prompt
+    func regenerateAssistantMessage(id: String, mode: RegenerateMode) async {
+        guard !isLoading,
+              let idx = messages.firstIndex(where: { $0.id == id }),
+              messages[idx].role == "assistant",
+              let aiService else { return }
+
+        let oldMsg = messages[idx]
+        // Remove the assistant message from UI + DB
+        messages.remove(at: idx)
+        if let dbId = Int(oldMsg.id) {
+            await db.deleteMessage(id: dbId)
+        }
+
+        isLoading = true
+        errorMessage = nil
+
+        let task = Task { [weak self] in
+            guard let self else { return }
+            defer { self.isLoading = false }
+            do {
+                let response: String
+                switch mode {
+                case .same:
+                    let lastUser = self.messages.last(where: { $0.role == "user" })?.content ?? ""
+                    let results = await self.indexingService.searchSimilar(query: lastUser, paperId: self.paper.id, aiService: aiService)
+                    try Task.checkCancellation()
+                    let contextChunks = results.map { "[Page \($0.chunk.pageNumber)] \($0.chunk.text)" }.joined(separator: "\n\n---\n\n")
+                    let history = self.messages.map { (role: $0.role, content: $0.content) }
+                    let systemPrompt = self.buildSystemPrompt(contextChunks: contextChunks)
+                    let raw = try await aiService.chatCompletion(systemPrompt: systemPrompt, messages: history)
+                    try Task.checkCancellation()
+                    let retrievedChunks = results.map { (page: $0.chunk.pageNumber, text: $0.chunk.text) }
+                    response = Self.ensureCitations(response: raw, retrievedChunks: retrievedChunks)
+                case .bullets, .paragraphs:
+                    let instruction = mode == .bullets
+                        ? "Convert to concise bullet points. Only important information, no repitition, no intro, in a consistent format:"
+                        : "Rewrite as clear, flowing paragraphs"
+                    let userMsg = "\(instruction)\n\n\(oldMsg.content)"
+                    let systemPrompt = "You are a helpful assistant. Follow the user's instructions precisely. Preserve any inline [p.N] page citations from the original text."
+                    response = try await aiService.chatCompletion(
+                        systemPrompt: systemPrompt,
+                        messages: [(role: "user", content: userMsg)]
+                    )
+                }
+
+                try Task.checkCancellation()
+                let newId = await self.persistMessage(role: "assistant", content: response)
+                let newMsg = DisplayMessage(
+                    id: newId.map { String($0) } ?? UUID().uuidString,
+                    role: "assistant",
+                    content: response,
+                    timestamp: Date()
+                )
+                self.messages.append(newMsg)
+            } catch is CancellationError {
+                // Silent
+            } catch let error as URLError where error.code == .cancelled {
+                // Silent
+            } catch {
+                self.errorMessage = error.localizedDescription
+            }
+        }
+        currentTask = task
+        await task.value
+        currentTask = nil
     }
 
     // MARK: - Provider Switching
@@ -130,6 +257,131 @@ class ChatViewModel {
         if let meta = await db.loadIndexMeta(forPaper: paper.id) {
             suggestedQuestions = meta.suggestedQuestions
         }
+    }
+
+    // MARK: - Citation Fallback
+
+    /// Small local models (e.g. Qwen3.5-2B) often ignore the inline `[p.N]` citation
+    /// rule in the system prompt. This fallback post-processes the response: it groups
+    /// lines into paragraphs/bullet items, matches each group against the retrieved
+    /// chunks (via word overlap, falling back to the top embedding-ranked chunk), and
+    /// appends `[p.N]` inline at the end of each substantive group.
+    /// `retrievedChunks` must be in descending embedding-similarity order (first = best).
+    /// Skipped entirely if the response already contains any inline citation.
+    private static func ensureCitations(response: String, retrievedChunks: [(page: Int, text: String)]) -> String {
+        let citationPattern = #"\[pp?\.\s*\d+(?:\s*[-–]\s*\d+)?\]|\(pp?\.\s*\d+(?:\s*[-–]\s*\d+)?\)|\[page\s+\d+\]"#
+        if response.range(of: citationPattern, options: [.regularExpression, .caseInsensitive]) != nil {
+            return response
+        }
+        guard !retrievedChunks.isEmpty else { return response }
+
+        // Precompute chunk word sets once.
+        let chunkWordSets: [(page: Int, words: Set<String>)] = retrievedChunks.map {
+            (page: $0.page, words: wordSet(from: $0.text))
+        }
+        let fallbackPage = retrievedChunks[0].page  // best-ranked by embedding similarity
+
+        // Group consecutive non-empty lines into logical units. A unit is either:
+        //  - a single bullet / list item (line starting with `- `, `* `, `+ `, or `1. `)
+        //  - a paragraph (contiguous non-empty lines, blank line separates)
+        // Each unit is cited as a whole (one `[p.N]` at the end of its last line).
+        let lines = response.components(separatedBy: "\n")
+        var out: [String] = []
+        var group: [Int] = []  // indices into `lines`
+
+        func isBulletStart(_ line: String) -> Bool {
+            line.range(of: #"^\s*([-*+]\s+|\d+[.)]\s+)"#, options: .regularExpression) != nil
+        }
+
+        func flushGroup() {
+            guard !group.isEmpty else { return }
+            // Join the group into a single text blob for scoring.
+            let blob = group.map { lines[$0] }.joined(separator: " ")
+            let stripped = blob.replacingOccurrences(of: #"^(\s*[-*+]\s+|\s*\d+[.)]\s+)"#, with: "", options: .regularExpression)
+            let segWords = wordSet(from: stripped)
+
+            // Decide whether this group deserves a citation.
+            // Require at least some real content (not just markdown structure).
+            let trimmedBlob = blob.trimmingCharacters(in: .whitespaces)
+            let isHeader = trimmedBlob.hasPrefix("#")
+            let isDivider = trimmedBlob.hasPrefix("---")
+            let tooShort = trimmedBlob.count < 25
+            let shouldCite = !isHeader && !isDivider && !tooShort
+
+            if shouldCite {
+                // Score each chunk by word overlap; fall back to the top-ranked chunk.
+                var bestPage = fallbackPage
+                var bestScore = 0.0
+                if !segWords.isEmpty {
+                    for chunk in chunkWordSets {
+                        let overlap = Double(segWords.intersection(chunk.words).count)
+                        let score = overlap / Double(segWords.count)
+                        if score > bestScore {
+                            bestScore = score
+                            bestPage = chunk.page
+                        }
+                    }
+                }
+
+                // Append the citation to the LAST line of the group.
+                for (offset, idx) in group.enumerated() {
+                    if offset == group.count - 1 {
+                        out.append(appendCitation(line: lines[idx], page: bestPage))
+                    } else {
+                        out.append(lines[idx])
+                    }
+                }
+            } else {
+                for idx in group { out.append(lines[idx]) }
+            }
+            group.removeAll(keepingCapacity: true)
+        }
+
+        for (idx, line) in lines.enumerated() {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty {
+                flushGroup()
+                out.append(line)
+                continue
+            }
+            // A new bullet starts a new group, even without a blank line between.
+            if isBulletStart(line), !group.isEmpty {
+                flushGroup()
+            }
+            group.append(idx)
+        }
+        flushGroup()
+
+        return out.joined(separator: "\n")
+    }
+
+    /// Tokenize text into lowercase tokens longer than 3 chars (naturally filters
+    /// common stopwords and focuses on content-bearing terms, including math symbols
+    /// like `covariance`, `matrix`, `inference`).
+    private static func wordSet(from text: String) -> Set<String> {
+        let allowed = CharacterSet.letters.union(.decimalDigits)
+        let tokens = text.lowercased().unicodeScalars
+            .split { !allowed.contains($0) }
+            .map { String(String.UnicodeScalarView($0)) }
+            .filter { $0.count > 3 }
+        return Set(tokens)
+    }
+
+    /// Append ` [p.N]` to a line, placing it before any trailing sentence punctuation
+    /// so the final period/colon stays at the end.
+    private static func appendCitation(line: String, page: Int) -> String {
+        let trailing: Set<Character> = [".", "!", "?", ";", ":", ","]
+        var prefix = line
+        var suffix = ""
+        while let last = prefix.last, trailing.contains(last) {
+            suffix = String(last) + suffix
+            prefix.removeLast()
+        }
+        // Avoid citing lines that are only whitespace after stripping punctuation.
+        if prefix.trimmingCharacters(in: .whitespaces).isEmpty {
+            return line
+        }
+        return "\(prefix) [p.\(page)]\(suffix)"
     }
 
     // MARK: - System Prompt
@@ -196,10 +448,11 @@ class ChatViewModel {
         conversationId = id
     }
 
-    private func persistMessage(role: String, content: String) async {
-        guard let conversationId else { return }
+    private func persistMessage(role: String, content: String) async -> Int? {
+        guard let conversationId else { return nil }
         let now = ISO8601DateFormatter().string(from: Date())
-        await db.insertMessage(conversationId: conversationId, role: role, content: content, citations: nil, createdAt: now)
+        let id = await db.insertMessage(conversationId: conversationId, role: role, content: content, citations: nil, createdAt: now)
+        return id == 0 ? nil : id
     }
 
     // MARK: - Provider Config

@@ -120,6 +120,17 @@ struct AddPaperOptions {
 actor CLIService {
     static let shared = CLIService()
 
+    /// Maps NAMINGPAPER_* env var names (read by the CLI's Pydantic Settings) to the
+    /// Keychain account names used by KeychainService. Setting these avoids the CLI
+    /// calling `/usr/bin/security`, which triggers Keychain prompts on every run.
+    static let providerKeyAccounts: [String: String] = [
+        "NAMINGPAPER_ANTHROPIC_API_KEY": "anthropic_api_key",
+        "NAMINGPAPER_OPENAI_API_KEY": "openai_api_key",
+        "NAMINGPAPER_GEMINI_API_KEY": "gemini_api_key",
+        "NAMINGPAPER_OMLX_API_KEY": "omlx_api_key",
+        "NAMINGPAPER_LMSTUDIO_API_KEY": "lmstudio_api_key",
+    ]
+
     private var cliPath: String?
 
     // MARK: - CLI Discovery
@@ -170,6 +181,17 @@ actor CLIService {
                 env["NO_COLOR"] = "1"
                 env["TERM"] = "dumb"
                 env["COLUMNS"] = "500"
+
+                // Pass API keys via env vars so the CLI's Pydantic Settings picks them up
+                // instead of shelling out to `/usr/bin/security`, which re-prompts every run
+                // (the Keychain ACL on items created by this app doesn't include `security`).
+                for (envName, account) in Self.providerKeyAccounts {
+                    let key = KeychainService.load(account: account)
+                    if !key.isEmpty {
+                        env[envName] = key
+                    }
+                }
+
                 process.environment = env
 
                 let stdoutPipe = Pipe()

@@ -223,8 +223,14 @@ struct ChatPanelView: View {
 
     private var messagesSection: some View {
         ForEach(viewModel.messages) { message in
-            MessageBubbleView(message: message)
-                .id(message.id)
+            MessageBubbleView(
+                message: message,
+                viewModel: viewModel,
+                onEdit: { content in
+                    inputText = content
+                }
+            )
+            .id(message.id)
         }
     }
 
@@ -302,15 +308,27 @@ struct ChatPanelView: View {
                 .onSubmit { sendCurrent() }
                 .disabled(viewModel.isLoading || viewModel.isIndexing)
 
-            Button {
-                sendCurrent()
-            } label: {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(inputText.isEmpty || viewModel.isLoading ? Color.secondary : Color.teal)
+            if viewModel.isLoading {
+                Button {
+                    viewModel.stopGeneration()
+                } label: {
+                    Image(systemName: "stop.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(Color.teal)
+                }
+                .buttonStyle(.plain)
+                .help("Stop generating")
+            } else {
+                Button {
+                    sendCurrent()
+                } label: {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(inputText.isEmpty ? Color.secondary : Color.teal)
+                }
+                .buttonStyle(.plain)
+                .disabled(inputText.isEmpty || viewModel.isIndexing)
             }
-            .buttonStyle(.plain)
-            .disabled(inputText.isEmpty || viewModel.isLoading || viewModel.isIndexing)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)

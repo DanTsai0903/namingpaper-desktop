@@ -18,6 +18,7 @@ struct OnboardingView: View {
                 case 0: welcomeStep
                 case 1: directoryStep
                 case 2: tutorialStep
+                case 3: localAIStep
                 default: EmptyView()
                 }
             }
@@ -145,16 +146,12 @@ struct OnboardingView: View {
                     title: "Search",
                     description: "Search across titles, authors, journals, and keywords"
                 )
-                featureLinkCard(
-                    icon: "cpu",
-                    title: "Local AI Providers",
-                    description: "Run AI on your Mac — no API key needed. We recommend oMLX for best Apple Silicon performance",
-                    links: [
-                        ("oMLX (Recommended)", "https://omlx.ai"),
-                        ("Ollama", "https://ollama.com"),
-                        ("LM Studio", "https://lmstudio.ai"),
-                    ]
-                )
+                Button {
+                    withAnimation { step = 3 }
+                } label: {
+                    localAICard
+                }
+                .buttonStyle(.plain)
                 featureCard(
                     icon: "terminal",
                     title: "CLI Integration",
@@ -171,7 +168,66 @@ struct OnboardingView: View {
         }
     }
 
+    // MARK: - Step 4: Local AI Providers
+
+    private var localAIStep: some View {
+        VStack(spacing: 20) {
+            ScrollView {
+                LocalAIProvidersTutorialView()
+                    .padding(.horizontal, 24)
+            }
+
+            HStack(spacing: 12) {
+                Button("Back") {
+                    withAnimation { step = 2 }
+                }
+                .controlSize(.large)
+
+                Button("Get Started") {
+                    completeOnboarding()
+                }
+                .keyboardShortcut(.defaultAction)
+                .controlSize(.large)
+            }
+            .padding(.bottom, 8)
+        }
+    }
+
     // MARK: - Components
+
+    private var localAICard: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "cpu")
+                .font(.title2)
+                .foregroundColor(.accentColor)
+                .frame(width: 28, alignment: .center)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Local AI Providers")
+                    .fontWeight(.medium)
+                Text("Run AI on your Mac — no API key needed. We recommend oMLX for best Apple Silicon performance")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                HStack(spacing: 4) {
+                    Text("Setup guide")
+                        .font(.caption)
+                        .foregroundColor(.accentColor)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2)
+                        .foregroundColor(.accentColor)
+                }
+                .padding(.top, 2)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(.quaternary.opacity(0.5))
+        .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.accentColor.opacity(0.5), lineWidth: 1)
+        )
+    }
 
     private func featureCard(icon: String, title: String, description: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
@@ -222,10 +278,11 @@ struct OnboardingView: View {
     }
 
     private var stepIndicators: some View {
-        HStack(spacing: 8) {
+        let activeStep = min(step, 2)
+        return HStack(spacing: 8) {
             ForEach(0..<3) { index in
                 Circle()
-                    .fill(index == step ? Color.accentColor : Color.secondary.opacity(0.3))
+                    .fill(index == activeStep ? Color.accentColor : Color.secondary.opacity(0.3))
                     .frame(width: 8, height: 8)
             }
         }
