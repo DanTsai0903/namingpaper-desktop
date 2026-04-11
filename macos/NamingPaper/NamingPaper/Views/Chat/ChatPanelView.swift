@@ -22,7 +22,6 @@ struct ChatPanelView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 12) {
                         greetingSection
-                        suggestedQuestionsSection
                         messagesSection
                         if viewModel.isLoading {
                             loadingIndicator
@@ -179,18 +178,17 @@ struct ChatPanelView: View {
             .buttonStyle(.bordered)
             .tint(.teal)
             .disabled(viewModel.isLoading || viewModel.isIndexing)
-        }
-        .padding()
-        .background(Color(nsColor: .controlBackgroundColor))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-    }
 
-    // MARK: - Suggested Questions
-
-    @ViewBuilder
-    private var suggestedQuestionsSection: some View {
-        if !viewModel.suggestedQuestions.isEmpty && viewModel.messages.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
+            // Suggested questions live inside the same card as the title/summary/
+            // Summarize button. They're an "ask one of these to start" affordance,
+            // so keeping them in the welcome box (instead of a sibling section)
+            // keeps the initial state visually compact and obviously one unit.
+            // Hidden once the conversation has any messages — the welcome box
+            // stays around but the questions disappear so they don't clutter the
+            // history above the user's messages.
+            if !viewModel.suggestedQuestions.isEmpty && viewModel.messages.isEmpty {
+                Divider()
+                    .padding(.vertical, 2)
                 ForEach(viewModel.suggestedQuestions, id: \.self) { question in
                     Button {
                         Task { await viewModel.sendMessage(question) }
@@ -204,19 +202,18 @@ struct ChatPanelView: View {
                             Image(systemName: "arrow.up.circle")
                                 .foregroundStyle(.teal)
                         }
-                        .padding(10)
-                        .background(Color(nsColor: .controlBackgroundColor))
+                        .padding(8)
+                        .background(Color.secondary.opacity(0.08))
                         .clipShape(RoundedRectangle(cornerRadius: 8))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.secondary.opacity(0.2))
-                        )
                     }
                     .buttonStyle(.plain)
                     .disabled(viewModel.isLoading || viewModel.isIndexing)
                 }
             }
         }
+        .padding()
+        .background(Color(nsColor: .controlBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     // MARK: - Messages

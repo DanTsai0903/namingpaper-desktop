@@ -254,21 +254,15 @@ actor ChatAIService {
 
     /// Configure oMLX to auto-unload the model after `seconds` of idle time.
     /// Sent fire-and-forget BEFORE each chat/embed request via the admin API:
-    ///   PUT /admin/api/models/{model_id}/settings  {"ttl_seconds": N}
+    ///   PUT {base_url}/admin/api/models/{model_id}/settings  {"ttl_seconds": N}
     /// oMLX itself tracks last access and unloads when the idle window expires.
+    /// Uses the configured Base URL as-is — the user owns its value in AI Provider prefs.
     private func setOMLXTTL(seconds: Int) {
-        // Strip `/v1` (or any trailing path) from the configured base URL to reach
-        // the admin API root (admin endpoints live alongside `/v1`, not inside it).
-        let configured = config.baseURL.isEmpty ? "http://localhost:8000/v1" : config.baseURL
-        guard let v1URL = URL(string: configured) else { return }
-        var components = URLComponents()
-        components.scheme = v1URL.scheme
-        components.host = v1URL.host
-        components.port = v1URL.port
+        let configured = config.baseURL.isEmpty ? "http://localhost:8000" : config.baseURL
+        let base = configured.hasSuffix("/") ? String(configured.dropLast()) : configured
         // oMLX uses the short model name (last path component) in URLs
         let shortName = config.model.split(separator: "/").last.map(String.init) ?? config.model
-        components.path = "/admin/api/models/\(shortName)/settings"
-        guard let url = components.url else { return }
+        guard let url = URL(string: "\(base)/admin/api/models/\(shortName)/settings") else { return }
 
         let body: [String: Any] = ["ttl_seconds": seconds]
         guard let data = try? JSONSerialization.data(withJSONObject: body) else { return }

@@ -17,6 +17,12 @@ class ChatViewModel {
     private let indexingService = DocumentIndexingService()
     private let db = DatabaseService.shared
     private var currentTask: Task<Void, Never>?
+    /// The active provider/model `aiService` was built from. Mirrored here so we can
+    /// pass them as part of the indexing cache key — re-indexing must trigger when
+    /// either changes, since embeddings from different providers/models live in
+    /// incompatible vector spaces.
+    private var activeProviderId: String = ""
+    private var activeEmbeddingModel: String = ""
 
     enum RegenerateMode {
         case same
@@ -52,7 +58,7 @@ class ChatViewModel {
         // Index if needed
         isIndexing = true
         indexingProgress = "Indexing document..."
-        if let result = await indexingService.indexIfNeeded(paper: paper, aiService: aiService) {
+        if let result = await indexingService.indexIfNeeded(paper: paper, aiService: aiService, provider: activeProviderId, embeddingModel: activeEmbeddingModel) {
             suggestedQuestions = result.suggestedQuestions
             hasIndex = true
         }
@@ -150,22 +156,58 @@ class ChatViewModel {
         return content
     }
 
-    /// Regenerate an assistant message in place. The original assistant message is
-    /// removed from both UI and DB before generating a new one.
-    /// - `same`: re-runs the previous user query (with retrieval)
-    /// - `bullets` / `paragraphs`: transforms the existing response via a focused prompt
+    /// Re-ask in a way that's visible in the chat: appends a NEW user bubble
+    /// (carrying either the original question or a format-instruction-prefixed
+    /// copy of the previous answer), then generates a fresh assistant response
+    /// below it. Nothing in the existing chat is removed.
+    /// - `same`: new user bubble is the original question text
+    /// - `bullets` / `paragraphs`: new user bubble is the format prompt followed by
+    ///   the previous assistant response, so the model reformats it in place
     func regenerateAssistantMessage(id: String, mode: RegenerateMode) async {
         guard !isLoading,
-              let idx = messages.firstIndex(where: { $0.id == id }),
-              messages[idx].role == "assistant",
+              let assistantIdx = messages.firstIndex(where: { $0.id == id }),
+              messages[assistantIdx].role == "assistant",
               let aiService else { return }
 
-        let oldMsg = messages[idx]
-        // Remove the assistant message from UI + DB
-        messages.remove(at: idx)
-        if let dbId = Int(oldMsg.id) {
-            await db.deleteMessage(id: dbId)
+        let oldAssistant = messages[assistantIdx]
+
+        // Walk backward to find the user question that produced this answer —
+        // we need it for `.same` mode and for keying RAG retrieval.
+        var foundQIdx: Int? = nil
+        var i = assistantIdx - 1
+        while i >= 0 {
+            if messages[i].role == "user" {
+                foundQIdx = i
+                break
+            }
+            i -= 1
         }
+        guard let qIdx = foundQIdx else { return }
+        let originalQuestion = messages[qIdx].content
+
+        // Compose the new user-turn text. For format modes the previous assistant
+        // answer is embedded inline so the user can see exactly what's being
+        // reformatted (matches the screenshot the user shared).
+        let newUserText: String
+        switch mode {
+        case .same:
+            newUserText = originalQuestion
+        case .bullets:
+            newUserText = "Convert to concise bullet points. Only important information, no repetition, no intro, in a consistent format:\n\n\(oldAssistant.content)"
+        case .paragraphs:
+            newUserText = "Rewrite as clear, flowing paragraphs:\n\n\(oldAssistant.content)"
+        }
+
+        // Persist + show the new user bubble immediately so the user sees the
+        // re-ask before the model has finished generating.
+        let newUserId = await persistMessage(role: "user", content: newUserText)
+        let newUserMsg = DisplayMessage(
+            id: newUserId.map { String($0) } ?? UUID().uuidString,
+            role: "user",
+            content: newUserText,
+            timestamp: Date()
+        )
+        messages.append(newUserMsg)
 
         isLoading = true
         errorMessage = nil
@@ -174,32 +216,23 @@ class ChatViewModel {
             guard let self else { return }
             defer { self.isLoading = false }
             do {
-                let response: String
-                switch mode {
-                case .same:
-                    let lastUser = self.messages.last(where: { $0.role == "user" })?.content ?? ""
-                    let results = await self.indexingService.searchSimilar(query: lastUser, paperId: self.paper.id, aiService: aiService)
-                    try Task.checkCancellation()
-                    let contextChunks = results.map { "[Page \($0.chunk.pageNumber)] \($0.chunk.text)" }.joined(separator: "\n\n---\n\n")
-                    let history = self.messages.map { (role: $0.role, content: $0.content) }
-                    let systemPrompt = self.buildSystemPrompt(contextChunks: contextChunks)
-                    let raw = try await aiService.chatCompletion(systemPrompt: systemPrompt, messages: history)
-                    try Task.checkCancellation()
-                    let retrievedChunks = results.map { (page: $0.chunk.pageNumber, text: $0.chunk.text) }
-                    response = Self.ensureCitations(response: raw, retrievedChunks: retrievedChunks)
-                case .bullets, .paragraphs:
-                    let instruction = mode == .bullets
-                        ? "Convert to concise bullet points. Only important information, no repitition, no intro, in a consistent format:"
-                        : "Rewrite as clear, flowing paragraphs"
-                    let userMsg = "\(instruction)\n\n\(oldMsg.content)"
-                    let systemPrompt = "You are a helpful assistant. Follow the user's instructions precisely. Preserve any inline [p.N] page citations from the original text."
-                    response = try await aiService.chatCompletion(
-                        systemPrompt: systemPrompt,
-                        messages: [(role: "user", content: userMsg)]
-                    )
-                }
-
+                // Retrieval is keyed off the original question so the model still
+                // sees the same paper context the first answer would have.
+                let results = await self.indexingService.searchSimilar(query: originalQuestion, paperId: self.paper.id, aiService: aiService)
                 try Task.checkCancellation()
+                let contextChunks = results.map { "[Page \($0.chunk.pageNumber)] \($0.chunk.text)" }.joined(separator: "\n\n---\n\n")
+
+                // Send the full chat including the user bubble we just appended,
+                // so the model has every turn in scope.
+                let history = self.messages.map { (role: $0.role, content: $0.content) }
+
+                let systemPrompt = self.buildSystemPrompt(contextChunks: contextChunks)
+                let raw = try await aiService.chatCompletion(systemPrompt: systemPrompt, messages: history)
+                try Task.checkCancellation()
+
+                let retrievedChunks = results.map { (page: $0.chunk.pageNumber, text: $0.chunk.text) }
+                let response = Self.ensureCitations(response: raw, retrievedChunks: retrievedChunks)
+
                 let newId = await self.persistMessage(role: "assistant", content: response)
                 let newMsg = DisplayMessage(
                     id: newId.map { String($0) } ?? UUID().uuidString,
@@ -234,7 +267,7 @@ class ChatViewModel {
         errorMessage = nil
         isIndexing = true
         indexingProgress = "Re-indexing for new provider..."
-        if let result = await indexingService.indexIfNeeded(paper: paper, aiService: aiService) {
+        if let result = await indexingService.indexIfNeeded(paper: paper, aiService: aiService, provider: activeProviderId, embeddingModel: activeEmbeddingModel) {
             suggestedQuestions = result.suggestedQuestions
             hasIndex = true
         }
@@ -460,6 +493,8 @@ class ChatViewModel {
     private func buildAIService() -> ChatAIService? {
         let activeProvider = UserDefaults.standard.string(forKey: "aiProvider") ?? "ollama"
         let activeModel = UserDefaults.standard.string(forKey: "aiModel") ?? ""
+        self.activeProviderId = activeProvider
+        self.activeEmbeddingModel = activeModel
 
         // Load saved providers to find the active one's full config
         var apiKey = ""

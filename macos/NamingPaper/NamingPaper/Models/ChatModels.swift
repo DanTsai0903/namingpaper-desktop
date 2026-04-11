@@ -33,4 +33,10 @@ struct IndexMeta {
     let pdfModifiedAt: String
     let suggestedQuestions: [String]
     let indexedAt: String
+    /// AI provider id used to embed this paper's chunks (e.g. "ollama", "omlx").
+    /// Part of the cache key — different providers produce incompatible vector spaces.
+    let provider: String
+    /// Embedding model name used (typically the same as the chat model except for
+    /// providers like Gemini that hardcode an embedding model). Part of the cache key.
+    let embeddingModel: String
 }

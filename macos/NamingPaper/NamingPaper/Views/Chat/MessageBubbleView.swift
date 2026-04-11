@@ -14,23 +14,31 @@ struct MessageBubbleView: View {
                 Spacer(minLength: 60)
                 VStack(alignment: .trailing, spacing: 4) {
                     userBubble
-                    if isHovering {
-                        userActions
-                    }
+                    // Keep the action row in the layout permanently so the hover
+                    // region covers it — toggling its presence creates a gap that
+                    // drops the hover state before the cursor can reach the icons.
+                    userActions
+                        .opacity(isHovering ? 1 : 0)
+                        .allowsHitTesting(isHovering)
+                }
+                .contentShape(Rectangle())
+                .onHover { hovering in
+                    isHovering = hovering
                 }
             } else {
                 VStack(alignment: .leading, spacing: 4) {
                     assistantBubble
-                    if isHovering {
-                        assistantActions
-                            .padding(.leading, 28) // align under text, past sparkle icon
-                    }
+                    assistantActions
+                        .padding(.leading, 28) // align under text, past sparkle icon
+                        .opacity(isHovering ? 1 : 0)
+                        .allowsHitTesting(isHovering)
+                }
+                .contentShape(Rectangle())
+                .onHover { hovering in
+                    isHovering = hovering
                 }
                 Spacer(minLength: 60)
             }
-        }
-        .onHover { hovering in
-            isHovering = hovering
         }
     }
 

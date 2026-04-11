@@ -43,6 +43,7 @@ actor DatabaseService {
         }
         db = handle
         migrateToV2()
+        migrateToV3()
         checkSchemaVersion()
         updateLastModified()
     }
@@ -706,6 +707,8 @@ actor DatabaseService {
                 pdf_modified_at TEXT NOT NULL,
                 suggested_questions TEXT,
                 indexed_at TEXT NOT NULL,
+                provider TEXT NOT NULL DEFAULT '',
+                embedding_model TEXT NOT NULL DEFAULT '',
                 FOREIGN KEY (paper_id) REFERENCES papers(id) ON DELETE CASCADE
             )
             """,
@@ -734,6 +737,45 @@ actor DatabaseService {
         ]
 
         for sql in migrations {
+            var stmt: OpaquePointer?
+            if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
+                sqlite3_step(stmt)
+                sqlite3_finalize(stmt)
+            }
+        }
+    }
+
+    /// V3: extend `paper_index_meta` with the AI provider id and embedding model
+    /// name so the cache key reflects what produced the stored vectors. Without
+    /// this, switching providers reuses chunks embedded by the previous one and
+    /// `cosineSimilarity` silently bails out (different dimensions) or compares
+    /// across incompatible vector spaces.
+    /// SQLite's `ALTER TABLE ADD COLUMN` errors out if the column already exists,
+    /// so we check `PRAGMA table_info` first and only ALTER when the column is
+    /// missing. This makes the migration idempotent across repeated launches.
+    private func migrateToV3() {
+        guard let db else { return }
+
+        var existing = Set<String>()
+        var infoStmt: OpaquePointer?
+        if sqlite3_prepare_v2(db, "PRAGMA table_info(paper_index_meta)", -1, &infoStmt, nil) == SQLITE_OK {
+            while sqlite3_step(infoStmt) == SQLITE_ROW {
+                if let cName = sqlite3_column_text(infoStmt, 1) {
+                    existing.insert(String(cString: cName))
+                }
+            }
+        }
+        sqlite3_finalize(infoStmt)
+
+        var alters: [String] = []
+        if !existing.contains("provider") {
+            alters.append("ALTER TABLE paper_index_meta ADD COLUMN provider TEXT NOT NULL DEFAULT ''")
+        }
+        if !existing.contains("embedding_model") {
+            alters.append("ALTER TABLE paper_index_meta ADD COLUMN embedding_model TEXT NOT NULL DEFAULT ''")
+        }
+
+        for sql in alters {
             var stmt: OpaquePointer?
             if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
                 sqlite3_step(stmt)
@@ -811,11 +853,11 @@ actor DatabaseService {
 
     // MARK: - Index Metadata
 
-    func saveIndexMeta(paperId: String, pdfModifiedAt: String, suggestedQuestions: [String], indexedAt: String) {
+    func saveIndexMeta(paperId: String, pdfModifiedAt: String, suggestedQuestions: [String], indexedAt: String, provider: String, embeddingModel: String) {
         guard let db else { return }
         let questionsJSON = (try? JSONSerialization.data(withJSONObject: suggestedQuestions)).flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
 
-        let sql = "INSERT OR REPLACE INTO paper_index_meta (paper_id, pdf_modified_at, suggested_questions, indexed_at) VALUES (?, ?, ?, ?)"
+        let sql = "INSERT OR REPLACE INTO paper_index_meta (paper_id, pdf_modified_at, suggested_questions, indexed_at, provider, embedding_model) VALUES (?, ?, ?, ?, ?, ?)"
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
         defer { sqlite3_finalize(stmt) }
@@ -824,12 +866,14 @@ actor DatabaseService {
         sqlite3_bind_text(stmt, 2, (pdfModifiedAt as NSString).utf8String, -1, nil)
         sqlite3_bind_text(stmt, 3, (questionsJSON as NSString).utf8String, -1, nil)
         sqlite3_bind_text(stmt, 4, (indexedAt as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 5, (provider as NSString).utf8String, -1, nil)
+        sqlite3_bind_text(stmt, 6, (embeddingModel as NSString).utf8String, -1, nil)
         sqlite3_step(stmt)
     }
 
     func loadIndexMeta(forPaper paperId: String) -> IndexMeta? {
         guard let db else { return nil }
-        let sql = "SELECT paper_id, pdf_modified_at, suggested_questions, indexed_at FROM paper_index_meta WHERE paper_id = ?"
+        let sql = "SELECT paper_id, pdf_modified_at, suggested_questions, indexed_at, provider, embedding_model FROM paper_index_meta WHERE paper_id = ?"
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return nil }
         defer { sqlite3_finalize(stmt) }
@@ -840,9 +884,11 @@ actor DatabaseService {
         let pdfModifiedAt = String(cString: sqlite3_column_text(stmt, 1))
         let questionsStr = String(cString: sqlite3_column_text(stmt, 2))
         let indexedAt = String(cString: sqlite3_column_text(stmt, 3))
+        let provider = String(cString: sqlite3_column_text(stmt, 4))
+        let embeddingModel = String(cString: sqlite3_column_text(stmt, 5))
 
         let questions: [String] = (try? JSONSerialization.jsonObject(with: Data(questionsStr.utf8)) as? [String]) ?? []
-        return IndexMeta(paperId: paperId, pdfModifiedAt: pdfModifiedAt, suggestedQuestions: questions, indexedAt: indexedAt)
+        return IndexMeta(paperId: paperId, pdfModifiedAt: pdfModifiedAt, suggestedQuestions: questions, indexedAt: indexedAt, provider: provider, embeddingModel: embeddingModel)
     }
 
     func deleteIndexMeta(forPaper paperId: String) {

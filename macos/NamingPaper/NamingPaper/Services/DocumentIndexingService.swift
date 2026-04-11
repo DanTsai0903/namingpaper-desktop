@@ -13,14 +13,20 @@ actor DocumentIndexingService {
 
     // MARK: - Public API
 
-    func indexIfNeeded(paper: Paper, aiService: ChatAIService) async -> IndexResult? {
+    func indexIfNeeded(paper: Paper, aiService: ChatAIService, provider: String, embeddingModel: String) async -> IndexResult? {
         guard let url = paper.pdfURL, paper.pdfExists else { return nil }
 
-        // Check cache
+        // Cache hit only when the PDF, provider, AND embedding model all match.
+        // Provider/model are part of the key because vectors from different
+        // providers (or different models within a provider) live in incompatible
+        // spaces — reusing them produces garbage similarity scores or, when
+        // dimensions differ, makes `cosineSimilarity` bail out to 0.
         if let meta = await db.loadIndexMeta(forPaper: paper.id) {
             let attrs = try? FileManager.default.attributesOfItem(atPath: url.path)
             let modDate = (attrs?[.modificationDate] as? Date).map { ISO8601DateFormatter().string(from: $0) } ?? ""
-            if meta.pdfModifiedAt == modDate {
+            if meta.pdfModifiedAt == modDate
+                && meta.provider == provider
+                && meta.embeddingModel == embeddingModel {
                 let chunks = await db.loadChunks(forPaper: paper.id)
                 return IndexResult(
                     chunkCount: chunks.count,
@@ -28,17 +34,17 @@ actor DocumentIndexingService {
                     suggestedQuestions: meta.suggestedQuestions
                 )
             }
-            // PDF changed — re-index
+            // Cache miss — drop the old chunks/meta and re-build with the new key
             await db.deleteChunks(forPaper: paper.id)
             await db.deleteIndexMeta(forPaper: paper.id)
         }
 
-        return await performIndexing(paper: paper, url: url, aiService: aiService)
+        return await performIndexing(paper: paper, url: url, aiService: aiService, provider: provider, embeddingModel: embeddingModel)
     }
 
     // MARK: - Indexing Pipeline
 
-    private func performIndexing(paper: Paper, url: URL, aiService: ChatAIService) async -> IndexResult? {
+    private func performIndexing(paper: Paper, url: URL, aiService: ChatAIService, provider: String, embeddingModel: String) async -> IndexResult? {
         // 1. Extract text per page
         guard let document = PDFDocument(url: url) else { return nil }
         var pageTexts: [(page: Int, text: String)] = []
@@ -90,7 +96,7 @@ actor DocumentIndexingService {
         // 6. Store index metadata
         let attrs = try? FileManager.default.attributesOfItem(atPath: url.path)
         let modDate = (attrs?[.modificationDate] as? Date).map { ISO8601DateFormatter().string(from: $0) } ?? now
-        await db.saveIndexMeta(paperId: paper.id, pdfModifiedAt: modDate, suggestedQuestions: questions, indexedAt: now)
+        await db.saveIndexMeta(paperId: paper.id, pdfModifiedAt: modDate, suggestedQuestions: questions, indexedAt: now, provider: provider, embeddingModel: embeddingModel)
 
         return IndexResult(chunkCount: chunks.count, hasEmbeddings: hasEmbeddings, suggestedQuestions: questions)
     }

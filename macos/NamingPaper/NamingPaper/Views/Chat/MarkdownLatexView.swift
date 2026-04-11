@@ -8,9 +8,15 @@ struct MarkdownLatexView: NSViewRepresentable {
 
     func makeNSView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
+        config.userContentController.add(context.coordinator, name: "heightChanged")
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.setValue(false, forKey: "drawsBackground")
+        // The bubble's SwiftUI frame is sized to the body's scrollHeight, so the
+        // WKWebView itself should never need to scroll. Suppress the scroll view's
+        // bounce/elasticity so a stray pixel can't drag content out of place.
+        webView.enclosingScrollView?.verticalScrollElasticity = .none
+        webView.enclosingScrollView?.horizontalScrollElasticity = .none
         return webView
     }
 
@@ -21,23 +27,34 @@ struct MarkdownLatexView: NSViewRepresentable {
         webView.loadHTMLString(html, baseURL: baseURL)
     }
 
+    static func dismantleNSView(_ nsView: WKWebView, coordinator: Coordinator) {
+        nsView.configuration.userContentController.removeScriptMessageHandler(forName: "heightChanged")
+    }
+
     func makeCoordinator() -> Coordinator {
         Coordinator(dynamicHeight: $dynamicHeight)
     }
 
-    class Coordinator: NSObject, WKNavigationDelegate {
+    class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         var dynamicHeight: Binding<CGFloat>
 
         init(dynamicHeight: Binding<CGFloat>) {
             self.dynamicHeight = dynamicHeight
         }
 
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            webView.evaluateJavaScript("document.body.scrollHeight") { result, _ in
-                if let h = result as? CGFloat {
-                    DispatchQueue.main.async {
-                        self.dynamicHeight.wrappedValue = h
-                    }
+        func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+            guard message.name == "heightChanged" else { return }
+            let h: CGFloat
+            if let n = message.body as? NSNumber {
+                h = CGFloat(truncating: n)
+            } else if let d = message.body as? Double {
+                h = CGFloat(d)
+            } else {
+                return
+            }
+            DispatchQueue.main.async {
+                if abs(self.dynamicHeight.wrappedValue - h) > 0.5 {
+                    self.dynamicHeight.wrappedValue = h
                 }
             }
         }
@@ -64,13 +81,13 @@ struct MarkdownLatexView: NSViewRepresentable {
         let jsonData = try! JSONEncoder().encode(content)
         let jsonString = String(data: jsonData, encoding: .utf8)!
 
-        // Regex patterns for citation matching — use raw strings to avoid Swift escape issues
-        // Match [p.3], [p. 3], [pp.3-5], [pp. 3-5] with brackets
-        let citeBracketPattern = #"\[pp?\.\s*(\d+)(?:\s*[-–]\s*(\d+))?\]"#
-        // Match (p.3), (p. 525), (pp. 3-5) with parentheses
-        let citeParenPattern = #"\(pp?\.\s*(\d+)(?:\s*[-–]\s*(\d+))?\)"#
-        // Match [page 3] or [Page 3]
-        let citeWordPattern = #"\[page\s+(\d+)\]"#
+        // Regex patterns for citation matching — use raw strings to avoid Swift escape issues.
+        // Captures the inside (digits + commas + dashes + spaces) so the JS callback can
+        // split it into multiple badges. Supports forms like:
+        //   [p. 3]  [p.3]  [pp. 3-5]  [Page 3]  [Pages 3, 4, 5]  [p. 1, 5]
+        let citeBracketPattern = #"\[(?:pp?\.|pages?)\s*(\d[\d\s,\-–]*)\]"#
+        // Same shapes wrapped in parentheses: (p. 525), (pp. 3-5), (Pages 3, 4, 5)
+        let citeParenPattern = #"\((?:pp?\.|pages?)\s*(\d[\d\s,\-–]*)\)"#
 
         // Read bundled JS/CSS inline so we don't depend on file:// URL loading
         let katexCSS = readBundledFile("Resources/katex/katex.min.css") ?? ""
@@ -88,6 +105,12 @@ struct MarkdownLatexView: NSViewRepresentable {
         <script>\(markedJS)</script>
         <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
+            /* Suppress all scrolling at the document level — the SwiftUI frame is
+               sized to scrollHeight by the heightChanged callback, so the bubble
+               always encloses the full content. If the reported height ever lags
+               behind reality, we'd rather clip than show a scrollbar inside the
+               bubble (which the user explicitly does not want). */
+            html, body { overflow: hidden !important; }
             body {
                 font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
                 font-size: 13px;
@@ -225,15 +248,61 @@ struct MarkdownLatexView: NSViewRepresentable {
                 html = html.replace('%%IMATH_' + j + '%%', rendered);
             }
 
-            // Convert citation patterns into clickable superscript badges
-            function citeBadge(match, p1) {
-                return '<a class="citation" href="namingpaper://page/' + p1 + '">' + '\\u2197\\u00A0' + p1 + '</a>';
+            // Convert citation patterns into clickable superscript badges.
+            // The inner capture may contain a single page ("3"), a range ("3-5"),
+            // a comma-separated list ("3, 4, 5"), or a mix ("1, 3-5, 7"). Emit one
+            // badge per part so each is independently clickable.
+            function citeBadges(match, inner) {
+                if (!inner) return match;
+                var parts = inner.split(/\\s*,\\s*/);
+                var out = '';
+                for (var i = 0; i < parts.length; i++) {
+                    var part = parts[i].trim();
+                    var rangeMatch = part.match(/^(\\d+)\\s*[-\\u2013]\\s*(\\d+)$/);
+                    if (rangeMatch) {
+                        var start = rangeMatch[1];
+                        var end = rangeMatch[2];
+                        out += '<a class="citation" href="namingpaper://page/' + start + '">\\u2197\\u00A0' + start + '-' + end + '</a>';
+                    } else if (/^\\d+$/.test(part)) {
+                        out += '<a class="citation" href="namingpaper://page/' + part + '">\\u2197\\u00A0' + part + '</a>';
+                    }
+                }
+                return out || match;
             }
-            html = html.replace(new RegExp(\(Self.jsStringLiteral(citeBracketPattern)), 'gi'), citeBadge);
-            html = html.replace(new RegExp(\(Self.jsStringLiteral(citeParenPattern)), 'gi'), citeBadge);
-            html = html.replace(new RegExp(\(Self.jsStringLiteral(citeWordPattern)), 'gi'), citeBadge);
+            html = html.replace(new RegExp(\(Self.jsStringLiteral(citeBracketPattern)), 'gi'), citeBadges);
+            html = html.replace(new RegExp(\(Self.jsStringLiteral(citeParenPattern)), 'gi'), citeBadges);
 
             document.getElementById('content').innerHTML = html;
+
+            // Push body height back to the host whenever it changes so the SwiftUI
+            // bubble stays exactly as tall as the rendered content — that way the
+            // WKWebView never has anything to scroll. Use ONLY body.scrollHeight:
+            // documentElement.clientHeight (and offsetHeight) reflect the WKWebView
+            // viewport, which equals whatever frame SwiftUI just gave us. Mixing
+            // those into a Math.max creates a feedback loop — the bubble keeps
+            // ratcheting up because each new frame grows the viewport, which then
+            // gets reported back as the "content" height.
+            function postHeight() {
+                var h = Math.ceil(document.body.scrollHeight);
+                if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.heightChanged) {
+                    window.webkit.messageHandlers.heightChanged.postMessage(h);
+                }
+            }
+            postHeight();
+            if (typeof ResizeObserver !== 'undefined') {
+                var ro = new ResizeObserver(function() { postHeight(); });
+                ro.observe(document.body);
+            }
+            window.addEventListener('load', postHeight);
+            if (document.fonts && document.fonts.ready) {
+                document.fonts.ready.then(postHeight);
+            }
+            // Belt-and-braces: a few delayed re-measurements catch late layout
+            // shifts from KaTeX font swaps that ResizeObserver may miss when the
+            // glyph metrics change without altering the body box.
+            setTimeout(postHeight, 50);
+            setTimeout(postHeight, 200);
+            setTimeout(postHeight, 600);
         })();
         </script>
         </body>
